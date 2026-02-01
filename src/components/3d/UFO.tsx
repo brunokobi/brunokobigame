@@ -1,108 +1,67 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, RapierRigidBody } from '@react-three/rapier';
+import { SpotLight } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGameStore } from '@/store/gameStore';
 
-const MOVE_FORCE = 15;
-const MAX_VELOCITY = 12;
-const UFO_HEIGHT = 4;
+const MOVE_SPEED = 8;
+const MAX_VELOCITY = 15;
 
 export const UFO = () => {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
+  const spotLightRef = useRef<THREE.SpotLight>(null);
   const { isAbducting, setAbducting } = useGameStore();
   
-  const movement = useRef({
-    forward: false,
-    backward: false,
-    left: false,
-    right: false,
+  const keysPressed = useRef({
+    w: false,
+    a: false,
+    s: false,
+    d: false,
   });
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    switch (e.code) {
-      case 'KeyW':
-      case 'ArrowUp':
-        movement.current.forward = true;
-        break;
-      case 'KeyS':
-      case 'ArrowDown':
-        movement.current.backward = true;
-        break;
-      case 'KeyA':
-      case 'ArrowLeft':
-        movement.current.left = true;
-        break;
-      case 'KeyD':
-      case 'ArrowRight':
-        movement.current.right = true;
-        break;
-      case 'Space':
-        e.preventDefault();
-        setAbducting(true);
-        break;
-    }
-  }, [setAbducting]);
-
-  const handleKeyUp = useCallback((e: KeyboardEvent) => {
-    switch (e.code) {
-      case 'KeyW':
-      case 'ArrowUp':
-        movement.current.forward = false;
-        break;
-      case 'KeyS':
-      case 'ArrowDown':
-        movement.current.backward = false;
-        break;
-      case 'KeyA':
-      case 'ArrowLeft':
-        movement.current.left = false;
-        break;
-      case 'KeyD':
-      case 'ArrowRight':
-        movement.current.right = false;
-        break;
-      case 'Space':
-        setAbducting(false);
-        break;
-    }
-  }, [setAbducting]);
-
   useEffect(() => {
-    // Add listeners to document for better capture
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-    
-    // Focus window to ensure keyboard events are captured
-    window.focus();
-    
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if (key in keysPressed.current) {
+        keysPressed.current[key as keyof typeof keysPressed.current] = true;
+      }
+      if (e.code === 'Space') {
+        setAbducting(true);
+      }
     };
-  }, [handleKeyDown, handleKeyUp]);
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if (key in keysPressed.current) {
+        keysPressed.current[key as keyof typeof keysPressed.current] = false;
+      }
+      if (e.code === 'Space') {
+        setAbducting(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [setAbducting]);
 
   useFrame(() => {
     if (!rigidBodyRef.current) return;
 
-    const { forward, backward, left, right } = movement.current;
-    
-    // Calculate force direction
-    const forceX = (right ? 1 : 0) - (left ? 1 : 0);
-    const forceZ = (backward ? 1 : 0) - (forward ? 1 : 0);
+    const { w, a, s, d } = keysPressed.current;
+    const force = { x: 0, y: 0, z: 0 };
 
-    // Apply forces if any movement keys are pressed
-    if (forceX !== 0 || forceZ !== 0) {
-      // Normalize diagonal movement
-      const length = Math.sqrt(forceX * forceX + forceZ * forceZ);
-      const normalizedX = (forceX / length) * MOVE_FORCE;
-      const normalizedZ = (forceZ / length) * MOVE_FORCE;
-      
-      rigidBodyRef.current.applyImpulse(
-        { x: normalizedX, y: 0, z: normalizedZ },
-        true
-      );
-    }
+    if (w) force.z -= MOVE_SPEED;
+    if (s) force.z += MOVE_SPEED;
+    if (a) force.x -= MOVE_SPEED;
+    if (d) force.x += MOVE_SPEED;
+
+    // Apply movement forces
+    rigidBodyRef.current.applyImpulse(force, true);
 
     // Limit velocity
     const vel = rigidBodyRef.current.linvel();
@@ -110,20 +69,16 @@ export const UFO = () => {
     if (speed > MAX_VELOCITY) {
       const scale = MAX_VELOCITY / speed;
       rigidBodyRef.current.setLinvel(
-        { x: vel.x * scale, y: 0, z: vel.z * scale },
+        { x: vel.x * scale, y: vel.y, z: vel.z * scale },
         true
       );
     }
 
     // Keep UFO at fixed height
     const pos = rigidBodyRef.current.translation();
-    if (Math.abs(pos.y - UFO_HEIGHT) > 0.1) {
+    if (pos.y < 3 || pos.y > 5) {
       rigidBodyRef.current.setTranslation(
-        { x: pos.x, y: UFO_HEIGHT, z: pos.z },
-        true
-      );
-      rigidBodyRef.current.setLinvel(
-        { x: vel.x, y: 0, z: vel.z },
+        { x: pos.x, y: 4, z: pos.z },
         true
       );
     }
@@ -132,13 +87,11 @@ export const UFO = () => {
   return (
     <RigidBody
       ref={rigidBodyRef}
-      position={[0, UFO_HEIGHT, 0]}
-      linearDamping={1.5}
+      position={[0, 4, 0]}
+      linearDamping={2}
       angularDamping={10}
       enabledRotations={[false, false, false]}
       mass={1}
-      gravityScale={0}
-      lockTranslations={false}
     >
       <group>
         {/* UFO Body - Main Disk */}
@@ -192,18 +145,16 @@ export const UFO = () => {
         })}
 
         {/* Abduction Beam Light */}
-        {isAbducting && (
-          <spotLight
-            position={[0, -0.3, 0]}
-            angle={0.5}
-            penumbra={0.5}
-            intensity={50}
-            color="#00ff88"
-            castShadow
-            distance={20}
-            target-position={[0, -10, 0]}
-          />
-        )}
+        <SpotLight
+          ref={spotLightRef}
+          position={[0, -0.3, 0]}
+          angle={0.5}
+          penumbra={0.5}
+          intensity={isAbducting ? 50 : 0}
+          color="#00ff88"
+          castShadow
+          distance={20}
+        />
 
         {/* Abduction Beam Cone (visible when abducting) */}
         {isAbducting && (
@@ -217,14 +168,6 @@ export const UFO = () => {
             />
           </mesh>
         )}
-
-        {/* Point light for glow effect */}
-        <pointLight 
-          position={[0, 0, 0]} 
-          color="#00ff88" 
-          intensity={isAbducting ? 5 : 2} 
-          distance={10}
-        />
       </group>
     </RigidBody>
   );

@@ -16,7 +16,7 @@ export const Tutorial = () => {
             <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">S</kbd>
             <kbd className="px-2 py-1 bg-secondary rounded text-xs font-mono">D</kbd>
           </div>
-          <span className="text-muted-foreground">ou Setas para Voar</span>
+          <span className="text-muted-foreground">Voar</span>
         </div>
         
         <div className="w-px h-6 bg-border" />
@@ -30,8 +30,9 @@ export const Tutorial = () => {
 
         <div className="w-px h-6 bg-border" />
 
-        <div className="text-xs text-muted-foreground italic">
-          Clique na tela para ativar controles
+        <div className="flex items-center gap-2">
+          <span className="text-primary">🖱️</span>
+          <span className="text-muted-foreground">Arrastar para girar câmera</span>
         </div>
       </div>
     </motion.div>
