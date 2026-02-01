@@ -1,44 +1,43 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, RapierRigidBody } from '@react-three/rapier';
 import { SpotLight } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGameStore } from '@/store/gameStore';
 
-const MOVE_SPEED = 8;
-const MAX_VELOCITY = 15;
+const MOVE_SPEED = 12;
 
 export const UFO = () => {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
-  const spotLightRef = useRef<THREE.SpotLight>(null);
   const { isAbducting, setAbducting } = useGameStore();
   
+  // Criamos um objeto alvo para a luz seguir a nave
+  const [lightTarget] = useState(() => new THREE.Object3D());
+
   const keysPressed = useRef({
-    w: false,
-    a: false,
-    s: false,
-    d: false,
+    KeyW: false,
+    KeyA: false,
+    KeyS: false,
+    KeyD: false,
   });
 
   useEffect(() => {
+    lightTarget.position.set(0, -5, 0); 
+  }, [lightTarget]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
-      if (key in keysPressed.current) {
-        keysPressed.current[key as keyof typeof keysPressed.current] = true;
+      if (e.code in keysPressed.current) {
+        keysPressed.current[e.code as keyof typeof keysPressed.current] = true;
       }
-      if (e.code === 'Space') {
-        setAbducting(true);
-      }
+      if (e.code === 'Space') setAbducting(true);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
-      if (key in keysPressed.current) {
-        keysPressed.current[key as keyof typeof keysPressed.current] = false;
+      if (e.code in keysPressed.current) {
+        keysPressed.current[e.code as keyof typeof keysPressed.current] = false;
       }
-      if (e.code === 'Space') {
-        setAbducting(false);
-      }
+      if (e.code === 'Space') setAbducting(false);
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -49,123 +48,134 @@ export const UFO = () => {
     };
   }, [setAbducting]);
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!rigidBodyRef.current) return;
 
-    const { w, a, s, d } = keysPressed.current;
-    const force = { x: 0, y: 0, z: 0 };
+    // Pequena animação de rotação lenta no próprio eixo visual para dar vida
+    const time = state.clock.getElapsedTime();
+    
+    const { KeyW, KeyA, KeyS, KeyD } = keysPressed.current;
+    let x = 0;
+    let z = 0;
 
-    if (w) force.z -= MOVE_SPEED;
-    if (s) force.z += MOVE_SPEED;
-    if (a) force.x -= MOVE_SPEED;
-    if (d) force.x += MOVE_SPEED;
+    if (KeyW) z -= 1;
+    if (KeyS) z += 1;
+    if (KeyA) x -= 1;
+    if (KeyD) x += 1;
 
-    // Apply movement forces
-    rigidBodyRef.current.applyImpulse(force, true);
-
-    // Limit velocity
-    const vel = rigidBodyRef.current.linvel();
-    const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
-    if (speed > MAX_VELOCITY) {
-      const scale = MAX_VELOCITY / speed;
-      rigidBodyRef.current.setLinvel(
-        { x: vel.x * scale, y: vel.y, z: vel.z * scale },
-        true
-      );
+    if (x !== 0 || z !== 0) {
+      const length = Math.sqrt(x * x + z * z);
+      x /= length;
+      z /= length;
     }
 
-    // Keep UFO at fixed height
-    const pos = rigidBodyRef.current.translation();
-    if (pos.y < 3 || pos.y > 5) {
-      rigidBodyRef.current.setTranslation(
-        { x: pos.x, y: 4, z: pos.z },
-        true
-      );
-    }
+    rigidBodyRef.current.setLinvel({
+      x: x * MOVE_SPEED,
+      y: 0, 
+      z: z * MOVE_SPEED
+    }, true);
   });
 
   return (
     <RigidBody
       ref={rigidBodyRef}
       position={[0, 4, 0]}
-      linearDamping={2}
-      angularDamping={10}
-      enabledRotations={[false, false, false]}
-      mass={1}
+      gravityScale={0}
+      lockRotations={true}
+      canSleep={false}
+      linearDamping={0.5}
+      angularDamping={0}
+      colliders="hull"
     >
       <group>
-        {/* UFO Body - Main Disk */}
-        <mesh castShadow position={[0, 0, 0]}>
+        {/* --- CORPO PRINCIPAL --- */}
+        <mesh castShadow receiveShadow>
           <cylinderGeometry args={[1.2, 1.5, 0.3, 16]} />
           <meshStandardMaterial 
-            color="#c0c0c0" 
-            metalness={0.8} 
-            roughness={0.2} 
+            color="#d0d0d0" 
+            metalness={0.9} 
+            roughness={0.1} 
+            // Adicionei um leve brilho no metal para não ficar preto à noite
+            emissive="#222222" 
           />
         </mesh>
 
-        {/* UFO Top Dome */}
-        <mesh castShadow position={[0, 0.3, 0]}>
+        {/* --- CÚPULA DE VIDRO (Mais brilhante) --- */}
+        <mesh position={[0, 0.3, 0]}>
           <sphereGeometry args={[0.6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
           <meshStandardMaterial 
             color="#00ff88" 
             transparent 
-            opacity={0.6}
+            opacity={0.8}
             emissive="#00ff88"
-            emissiveIntensity={0.3}
+            emissiveIntensity={2} // Aumentei a intensidade do brilho
+            toneMapped={false}    // Faz o brilho "estourar" um pouco (Glow effect)
           />
         </mesh>
 
-        {/* UFO Bottom Ring */}
-        <mesh position={[0, -0.2, 0]}>
-          <torusGeometry args={[1.3, 0.08, 8, 24]} />
-          <meshStandardMaterial 
-            color="#00ff88" 
-            emissive="#00ff88"
-            emissiveIntensity={isAbducting ? 2 : 0.5}
-          />
-        </mesh>
-
-        {/* Lights around the UFO */}
-        {[0, 1, 2, 3, 4, 5].map((i) => {
-          const angle = (i / 6) * Math.PI * 2;
-          return (
-            <mesh 
-              key={i} 
-              position={[Math.cos(angle) * 1.1, -0.1, Math.sin(angle) * 1.1]}
-            >
-              <sphereGeometry args={[0.08, 8, 8]} />
-              <meshStandardMaterial 
-                color="#00ff88" 
-                emissive="#00ff88"
-                emissiveIntensity={isAbducting ? 3 : 1}
-              />
-            </mesh>
-          );
+        {/* --- ANEL DE LUZES GIRATÓRIAS --- */}
+        {/* Adiciona 8 pequenas luzes ao redor do disco */}
+        {[...Array(8)].map((_, i) => {
+            const angle = (i / 8) * Math.PI * 2;
+            const x = Math.cos(angle) * 1.3; // Raio um pouco maior que o corpo
+            const z = Math.sin(angle) * 1.3;
+            return (
+                <group key={i} position={[x, -0.1, z]}>
+                    <mesh>
+                        <sphereGeometry args={[0.08]} />
+                        <meshStandardMaterial 
+                            color="#00ffff" 
+                            emissive="#00ffff" 
+                            emissiveIntensity={10} // Brilho neon forte
+                            toneMapped={false} 
+                        />
+                    </mesh>
+                    {/* Luz real que ilumina o metal da nave ao redor */}
+                    <pointLight distance={1} intensity={2} color="#00ffff" />
+                </group>
+            );
         })}
 
-        {/* Abduction Beam Light */}
-        <SpotLight
-          ref={spotLightRef}
-          position={[0, -0.3, 0]}
-          angle={0.5}
-          penumbra={0.5}
-          intensity={isAbducting ? 50 : 0}
-          color="#00ff88"
-          castShadow
-          distance={20}
+        {/* --- LUZ DO MOTOR (Constant Engine Glow) --- */}
+        {/* Uma luz que fica sempre ligada embaixo, iluminando o chão suavemente */}
+        <pointLight 
+            position={[0, -0.5, 0]} 
+            intensity={3} 
+            distance={8} 
+            color="#00ff88" 
+            decay={2}
         />
 
-        {/* Abduction Beam Cone (visible when abducting) */}
+        {/* --- LUZ DE ABDUÇÃO (SpotLight Forte) --- */}
+        
+        {/* Alvo invisível */}
+        <primitive object={lightTarget} position={[0, -5, 0]} />
+
+        {/* O Holofote principal */}
+        <SpotLight
+          position={[0, -0.3, 0]}
+          target={lightTarget}
+          angle={0.6}
+          penumbra={0.4}
+          intensity={isAbducting ? 100 : 0} // Aumentei para 100 para ficar bem forte
+          color="#00ff88"
+          castShadow
+          distance={30}
+          attenuation={5}
+          anglePower={5}
+        />
+        
+        {/* Cone Visual Transparente */}
         {isAbducting && (
           <mesh position={[0, -2.5, 0]} rotation={[Math.PI, 0, 0]}>
-            <coneGeometry args={[2, 5, 16, 1, true]} />
-            <meshBasicMaterial 
-              color="#00ff88" 
-              transparent 
-              opacity={0.15}
-              side={THREE.DoubleSide}
-            />
+             <coneGeometry args={[2, 5, 32, 1, true]} />
+             <meshBasicMaterial 
+                color="#00ff88" 
+                transparent 
+                opacity={0.3} // Um pouco mais visível
+                side={THREE.DoubleSide} 
+                depthWrite={false}
+             />
           </mesh>
         )}
       </group>

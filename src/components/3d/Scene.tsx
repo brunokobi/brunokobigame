@@ -81,7 +81,7 @@ export const Scene = () => {
           antialias: true,
           alpha: false,
         }}
-        style={{ background: '#0a0a1a' }}
+        style={{ background: '#fdfdfd' }}
       >
         <Suspense fallback={null}>
           <SceneContent />

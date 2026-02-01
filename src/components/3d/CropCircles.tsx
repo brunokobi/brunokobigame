@@ -123,22 +123,22 @@ const CropCircle = ({ position, projectId, label, color }: CropCircleProps) => {
 export const CropCircles = () => {
   return (
     <group>
-      <CropCircle 
+      {/* <CropCircle 
         position={[10, 0, -5]} 
         projectId="ecommerce" 
         label="E-commerce" 
         color="#ff6b6b"
-      />
+      /> */}
       <CropCircle 
         position={[18, 0, 5]} 
         projectId="saas" 
-        label="SaaS App" 
+        label="Mapas" 
         color="#4ecdc4"
       />
       <CropCircle 
         position={[12, 0, 12]} 
         projectId="mobile" 
-        label="Mobile App" 
+        label="Projetos" 
         color="#ffe66d"
       />
     </group>

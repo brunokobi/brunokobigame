@@ -1,38 +1,33 @@
 import { RigidBody } from '@react-three/rapier';
+import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
 export const Ground = () => {
+  // 1. Carrega a textura que está na pasta public/textures/
+  const grassTexture = useTexture('/textures/grass.jpg');
+
+  // 2. Configura a repetição (Tiling)
+  // Isso é crucial para chão, senão a imagem de grama fica esticada e borrada
+  grassTexture.wrapS = grassTexture.wrapT = THREE.RepeatWrapping;
+  grassTexture.repeat.set(20, 20); // Repete a imagem 20 vezes em cada eixo
+  
+  // Opcional: Ajusta cores da textura para não ficar muito brilhante
+  // grassTexture.encoding = THREE.sRGBEncoding; // (Dependendo da versão do Three)
+
   return (
     <RigidBody type="fixed" friction={1}>
-      {/* Main Ground Plane */}
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[100, 100]} />
+      {/* O plano do chão */}
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]}>
+        <planeGeometry args={[200, 200]} />
+        
+        {/* Usamos MeshStandardMaterial para grama (opaco, reage à luz) */}
         <meshStandardMaterial 
-          color="#1a3d1a" 
-          roughness={0.9}
+          map={grassTexture}      // Aplica a imagem
+          color="#bbffbb"         // Um tom verde claro para misturar com a textura
+          roughness={1}           // Grama não brilha muito, então roughness alto
+          metalness={0}           // Grama não é metal
         />
       </mesh>
-
-      {/* Grass Patches for visual variety */}
-      {Array.from({ length: 50 }).map((_, i) => {
-        const x = (Math.random() - 0.5) * 80;
-        const z = (Math.random() - 0.5) * 80;
-        const scale = 0.5 + Math.random() * 1;
-        return (
-          <mesh 
-            key={i}
-            position={[x, 0.01, z]} 
-            rotation={[-Math.PI / 2, 0, Math.random() * Math.PI]}
-            receiveShadow
-          >
-            <circleGeometry args={[scale, 6]} />
-            <meshStandardMaterial 
-              color={`hsl(120, ${30 + Math.random() * 20}%, ${12 + Math.random() * 8}%)`}
-              roughness={1}
-            />
-          </mesh>
-        );
-      })}
     </RigidBody>
   );
 };

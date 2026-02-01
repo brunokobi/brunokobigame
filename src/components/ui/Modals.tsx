@@ -23,7 +23,7 @@ const AboutModal = () => {
         <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-4xl">
           👽
         </div>
-        <h2 className="text-2xl font-bold neon-text">The Fullstack Invader</h2>
+        <h2 className="text-2xl font-bold neon-text">Bruno Kobi Valadares de Amorim</h2>
         <p className="text-muted-foreground">Desenvolvedor Full Stack</p>
       </div>
 
@@ -36,7 +36,7 @@ const AboutModal = () => {
 
       <div className="flex justify-center gap-4">
         <a 
-          href="https://github.com" 
+          href="https://github.com/brunokobi" 
           target="_blank" 
           rel="noopener noreferrer"
           className="ufo-button flex items-center gap-2"
@@ -45,7 +45,7 @@ const AboutModal = () => {
           GitHub
         </a>
         <a 
-          href="https://linkedin.com" 
+          href="https://www.linkedin.com/in/brunokobi/" 
           target="_blank" 
           rel="noopener noreferrer"
           className="ufo-button flex items-center gap-2"
@@ -69,15 +69,15 @@ const ProjectModal = () => {
       color: '#ff6b6b',
     },
     saas: {
-      title: 'SaaS Dashboard',
+      title: 'Mapas',
       description: 'Dashboard analytics para empresas com gráficos em tempo real e relatórios.',
       techs: ['Next.js', 'TypeScript', 'GraphQL', 'MongoDB', 'Docker'],
       color: '#4ecdc4',
     },
     mobile: {
-      title: 'Mobile App',
-      description: 'Aplicativo mobile multiplataforma para gestão de tarefas e produtividade.',
-      techs: ['React Native', 'Expo', 'Firebase', 'Redux', 'Jest'],
+      title: 'Projetos',
+      description: 'Projetos desenvolvidos por mim, incluindo apps mobile e web.',
+      techs: ['React Native', 'Expo'],
       color: '#ffe66d',
     },
   };
