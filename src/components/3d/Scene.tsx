@@ -1,7 +1,7 @@
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Stars, Environment, PerspectiveCamera, OrbitControls } from '@react-three/drei';
+import { Stars, PerspectiveCamera } from '@react-three/drei';
 import { UFO } from './UFO';
 import { Ground } from './Ground';
 import { Barn } from './Barn';
@@ -12,21 +12,14 @@ import { Antenna } from './Antenna';
 const SceneContent = () => {
   return (
     <>
-      {/* Camera following UFO area */}
-      <PerspectiveCamera makeDefault position={[0, 25, 30]} fov={60} />
-      <OrbitControls 
-        enablePan={false}
-        minDistance={15}
-        maxDistance={50}
-        maxPolarAngle={Math.PI / 2.2}
-        target={[0, 0, 0]}
-      />
+      {/* Fixed Camera looking at the scene */}
+      <PerspectiveCamera makeDefault position={[0, 30, 35]} fov={50} />
 
       {/* Lighting */}
-      <ambientLight intensity={0.15} />
+      <ambientLight intensity={0.2} />
       <directionalLight 
         position={[10, 20, 10]} 
-        intensity={0.5}
+        intensity={0.6}
         color="#8888ff"
         castShadow
         shadow-mapSize-width={2048}
@@ -41,13 +34,13 @@ const SceneContent = () => {
       {/* Moon light */}
       <pointLight 
         position={[-30, 40, -30]} 
-        intensity={0.8} 
+        intensity={1} 
         color="#aaaaff" 
         distance={100}
       />
 
       {/* Fog for atmosphere */}
-      <fog attach="fog" args={['#0a0a1a', 20, 80]} />
+      <fog attach="fog" args={['#0a0a1a', 25, 90]} />
 
       {/* Starry sky */}
       <Stars 
@@ -60,7 +53,7 @@ const SceneContent = () => {
       />
 
       {/* Physics World */}
-      <Physics gravity={[0, -9.81, 0]} debug={false}>
+      <Physics gravity={[0, -9.81, 0]}>
         <UFO />
         <Ground />
         <Barn />
@@ -73,8 +66,21 @@ const SceneContent = () => {
 };
 
 export const Scene = () => {
+  // Ensure the canvas can receive keyboard events
+  useEffect(() => {
+    const handleClick = () => {
+      window.focus();
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
   return (
-    <div className="fixed inset-0 w-full h-full">
+    <div 
+      className="fixed inset-0 w-full h-full"
+      tabIndex={0}
+      onFocus={() => window.focus()}
+    >
       <Canvas
         shadows
         gl={{ 
@@ -82,6 +88,7 @@ export const Scene = () => {
           alpha: false,
         }}
         style={{ background: '#0a0a1a' }}
+        tabIndex={-1}
       >
         <Suspense fallback={null}>
           <SceneContent />
