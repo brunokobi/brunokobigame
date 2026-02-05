@@ -23,10 +23,10 @@ const SceneContent = () => {
       />
 
       {/* Lighting */}
-      <ambientLight intensity={0.15} />
+      <ambientLight intensity={0.4} />
       <directionalLight 
         position={[10, 20, 10]} 
-        intensity={0.5}
+        intensity={1.2}
         color="#8888ff"
         castShadow
         shadow-mapSize-width={2048}
@@ -41,13 +41,13 @@ const SceneContent = () => {
       {/* Moon light */}
       <pointLight 
         position={[-30, 40, -30]} 
-        intensity={0.8} 
+        intensity={1.5} 
         color="#aaaaff" 
         distance={100}
       />
 
       {/* Fog for atmosphere */}
-      <fog attach="fog" args={['#0a0a1a', 20, 80]} />
+      <fog attach="fog" args={['#1a1a2e', 30, 100]} />
 
       {/* Starry sky */}
       <Stars 
