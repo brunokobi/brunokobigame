@@ -1,6 +1,33 @@
 import { motion } from 'framer-motion';
+ import { useIsMobile } from '@/hooks/use-mobile';
 
 export const Tutorial = () => {
+   const isMobile = useIsMobile();
+ 
+   // Mobile tutorial - shows at top, simpler
+   if (isMobile) {
+     return (
+       <motion.div 
+         initial={{ opacity: 0, y: 20 }}
+         animate={{ opacity: 1, y: 0 }}
+         transition={{ delay: 0.5 }}
+         className="fixed top-24 left-1/2 -translate-x-1/2 z-40 pointer-events-none"
+       >
+         <div className="tutorial-bar flex items-center gap-4 text-xs px-4 py-2">
+           <div className="flex items-center gap-1">
+             <span className="text-primary font-bold">🕹️</span>
+             <span className="text-muted-foreground">Joystick</span>
+           </div>
+           <div className="w-px h-3 bg-border" />
+           <div className="flex items-center gap-1">
+             <span className="text-primary font-bold">👽</span>
+             <span className="text-muted-foreground">Abduzir</span>
+           </div>
+         </div>
+       </motion.div>
+     );
+   }
+ 
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}

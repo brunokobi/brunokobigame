@@ -4,6 +4,7 @@ import { RigidBody, RapierRigidBody } from '@react-three/rapier';
 import { SpotLight } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGameStore } from '@/store/gameStore';
+ import { mobileJoystickState } from '@/components/ui/MobileControls';
 
 const MOVE_SPEED = 12;
 
@@ -58,15 +59,22 @@ export const UFO = () => {
     let x = 0;
     let z = 0;
 
+     // Keyboard controls
     if (KeyW) z -= 1;
     if (KeyS) z += 1;
     if (KeyA) x -= 1;
     if (KeyD) x += 1;
 
+     // Mobile joystick controls (add to keyboard input)
+     x += mobileJoystickState.x;
+     z += mobileJoystickState.y;
+ 
     if (x !== 0 || z !== 0) {
       const length = Math.sqrt(x * x + z * z);
-      x /= length;
-      z /= length;
+       if (length > 1) {
+         x /= length;
+         z /= length;
+       }
     }
 
     rigidBodyRef.current.setLinvel({

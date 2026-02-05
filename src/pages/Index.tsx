@@ -3,6 +3,7 @@ import { HUD } from '@/components/ui/HUD';
 import { Tutorial } from '@/components/ui/Tutorial';
 import { Modals } from '@/components/ui/Modals';
 import { SkillToast } from '@/components/ui/SkillToast';
+ import { MobileControls } from '@/components/ui/MobileControls';
 import { motion } from 'framer-motion';
 
 const Index = () => {
@@ -16,6 +17,7 @@ const Index = () => {
       <Tutorial />
       <Modals />
       <SkillToast />
+       <MobileControls />
 
       {/* Title */}
       <motion.div 
