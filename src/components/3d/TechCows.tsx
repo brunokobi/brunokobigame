@@ -16,6 +16,7 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
   const { isAbducting, skills, collectSkill } = useGameStore();
   const [isBeingAbducted, setIsBeingAbducted] = useState(false);
   const [isCollected, setIsCollected] = useState(false);
+   const [abductionProgress, setAbductionProgress] = useState(0);
 
   // Animação de "balanço" idle para a vaca parecer viva
   const [randomOffset] = useState(() => Math.random() * 100);
@@ -23,20 +24,39 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
   const skill = skills.find(s => s.id === skillId);
   const isAlreadyCollected = skill?.collected || false;
 
-  useFrame((state) => {
+   useFrame((state, delta) => {
     if (!rigidBodyRef.current || isCollected || isAlreadyCollected) return;
 
-    // Lógica de abdução (Mantida original)
+     // Lógica de abdução melhorada com animação suave
     if (isBeingAbducted && isAbducting) {
-      // Girar enquanto sobe
-      rigidBodyRef.current.applyTorqueImpulse({ x: 0, y: 0.1, z: 0 }, true);
-      rigidBodyRef.current.applyImpulse({ x: 0, y: 0.8, z: 0 }, true);
-      
-      const pos = rigidBodyRef.current.translation();
-      if (pos.y > 6) { // Aumentei um pouco a altura de coleta
+       // Aumenta o progresso da abdução gradualmente
+       setAbductionProgress(prev => Math.min(prev + delta * 0.5, 1));
+       
+       // Força de levitação progressiva (mais suave no início, mais forte no final)
+       const liftForce = 0.3 + abductionProgress * 0.8;
+       rigidBodyRef.current.applyImpulse({ x: 0, y: liftForce, z: 0 }, true);
+       
+       // Girar suavemente enquanto sobe
+       rigidBodyRef.current.applyTorqueImpulse({ x: 0, y: 0.05 + abductionProgress * 0.1, z: 0 }, true);
+       
+       // Centraliza a vaca horizontalmente em direção ao ponto de abdução
+       const pos = rigidBodyRef.current.translation();
+       const currentVel = rigidBodyRef.current.linvel();
+       
+       // Amortece movimento horizontal para a vaca subir mais "reta"
+       rigidBodyRef.current.setLinvel({
+         x: currentVel.x * 0.95,
+         y: currentVel.y,
+         z: currentVel.z * 0.95
+       }, true);
+       
+       if (pos.y > 5.5) {
         collectSkill(skillId);
         setIsCollected(true);
       }
+     } else if (abductionProgress > 0) {
+       // Se parou de abduzir, reseta o progresso gradualmente
+       setAbductionProgress(prev => Math.max(prev - delta * 2, 0));
     } else {
       // Pequeno pulinho aleatório quando está no chão (Idle animation)
       const time = state.clock.getElapsedTime();
@@ -54,6 +74,10 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
   const cowPink = new THREE.MeshStandardMaterial({ color: "#ffb7b2", roughness: 0.5 });
   const cowHorn = new THREE.MeshStandardMaterial({ color: "#ddd", roughness: 0.6 });
 
+   // Calcula a opacidade e escala baseado no progresso da abdução
+   const glowIntensity = isBeingAbducted && isAbducting ? 1 + abductionProgress * 2 : 0;
+   const cowScale = 1 - abductionProgress * 0.3; // Encolhe conforme sobe
+ 
   return (
     <RigidBody
       ref={rigidBodyRef}
@@ -64,11 +88,29 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
       angularDamping={1}
       colliders={false} // Vamos definir o colisor manualmente
     >
-      <group>
+       <group scale={cowScale}>
+         {/* Efeito de brilho durante abdução */}
+         {isBeingAbducted && isAbducting && (
+           <mesh position={[0, 0.6, 0]}>
+             <sphereGeometry args={[1.2, 16, 16]} />
+             <meshBasicMaterial 
+               color="#00ff88" 
+               transparent 
+               opacity={0.1 + abductionProgress * 0.2}
+               side={THREE.BackSide}
+             />
+           </mesh>
+         )}
+ 
         {/* --- CORPO PRINCIPAL --- */}
-        <mesh castShadow receiveShadow position={[0, 0.6, 0]}>
+         <mesh castShadow receiveShadow position={[0, 0.6, 0]}>
           <boxGeometry args={[0.7, 0.6, 1.1]} />
-          <primitive object={cowWhite} />
+           <meshStandardMaterial 
+             color="#f0f0f0" 
+             roughness={0.8}
+             emissive="#00ff88"
+             emissiveIntensity={glowIntensity * 0.3}
+           />
         </mesh>
 
         {/* Manchas no corpo (Cubos pretos sobrepostos) */}
