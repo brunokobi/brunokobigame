@@ -23,14 +23,15 @@ const Index = () => {
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.5, duration: 0.8 }}
         className="fixed top-6 left-1/2 -translate-x-1/2 z-40 pointer-events-none text-center"
       >
-        <h1 className="text-3xl md:text-4xl font-bold tracking-wider">
+        <h1 className="text-3xl md:text-5xl font-bold tracking-[0.2em] font-space">
           <span className="text-primary neon-text">THE FULLSTACK</span>
-          <span className="text-foreground"> INVASION</span>
+          <br />
+          <span className="text-foreground/90 text-2xl md:text-3xl tracking-[0.3em]">INVASION</span>
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">
+        <p className="text-muted-foreground text-xs mt-2 tracking-widest uppercase">
           🛸 Explore o mapa e descubra meus projetos
         </p>
       </motion.div>

@@ -22,10 +22,10 @@ export const Ground = () => {
         
         {/* Usamos MeshStandardMaterial para grama (opaco, reage à luz) */}
         <meshStandardMaterial 
-          map={grassTexture}      // Aplica a imagem
-          color="#bbffbb"         // Um tom verde claro para misturar com a textura
-          roughness={1}           // Grama não brilha muito, então roughness alto
-          metalness={0}           // Grama não é metal
+          map={grassTexture}
+          color="#99dd99"
+          roughness={1}
+          metalness={0}
         />
       </mesh>
     </RigidBody>
