@@ -19,7 +19,6 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
     if (cubeRef.current) {
       cubeRef.current.rotation.y += delta * 0.15;
     }
-    // Folder inside subtle bobbing
     if (folderRef.current) {
       const t = state.clock.getElapsedTime();
       folderRef.current.rotation.z = Math.sin(t * 0.8) * 0.05;
@@ -48,15 +47,12 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
           {/* Glass cube shell */}
           <mesh>
             <boxGeometry args={[2.5, 2.5, 2.5]} />
-            <meshPhysicalMaterial
-              color="#ffffff"
+            <meshStandardMaterial
+              color="#aabbcc"
               transparent
               opacity={0.08}
               roughness={0}
-              metalness={0.1}
-              transmission={0.9}
-              thickness={0.5}
-              envMapIntensity={1}
+              metalness={0.3}
               side={THREE.DoubleSide}
             />
           </mesh>
@@ -102,7 +98,6 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
               color="#cc2222"
               anchorX="center"
               anchorY="middle"
-              fontWeight="bold"
             >
               CONFIDENTIAL
             </Text>
@@ -113,7 +108,6 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
               color="#111111"
               anchorX="center"
               anchorY="middle"
-              fontWeight="bold"
             >
               51
             </Text>
@@ -205,15 +199,12 @@ const MapCube = ({ position }: { position: [number, number, number] }) => {
           {/* Glass cube shell */}
           <mesh>
             <boxGeometry args={[2.5, 2.5, 2.5]} />
-            <meshPhysicalMaterial
-              color="#ffffff"
+            <meshStandardMaterial
+              color="#aabbdd"
               transparent
               opacity={0.08}
               roughness={0}
-              metalness={0.1}
-              transmission={0.9}
-              thickness={0.5}
-              envMapIntensity={1}
+              metalness={0.3}
               side={THREE.DoubleSide}
             />
           </mesh>

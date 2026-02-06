@@ -131,7 +131,7 @@ export const UFO = () => {
         {/* --- CÚPULA DE VIDRO (Brighter, more visible) --- */}
         <mesh position={[0, 0.3, 0]}>
           <sphereGeometry args={[0.6, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshPhysicalMaterial 
+          <meshStandardMaterial 
             color="#00ff88" 
             transparent 
             opacity={0.6}
@@ -140,7 +140,6 @@ export const UFO = () => {
             toneMapped={false}
             roughness={0}
             metalness={0.1}
-            transmission={0.4}
           />
         </mesh>
 
