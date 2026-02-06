@@ -96,8 +96,6 @@ export const Scene = () => {
         gl={{ 
           antialias: true,
           alpha: false,
-          toneMapping: 3, // ACESFilmicToneMapping for cinematic look
-          toneMappingExposure: 1.2,
         }}
         style={{ background: '#060610' }}
       >
