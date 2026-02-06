@@ -1,18 +1,20 @@
 import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Stars, Environment, PerspectiveCamera, OrbitControls } from '@react-three/drei';
+import { Stars, PerspectiveCamera, OrbitControls } from '@react-three/drei';
 import { UFO } from './UFO';
 import { Ground } from './Ground';
 import { Barn } from './Barn';
-import { CropCircles } from './CropCircles';
+import { HoloCubes } from './HoloCubes';
 import { TechCows } from './TechCows';
 import { Antenna } from './Antenna';
+import { Moon } from './Moon';
+import { Clouds } from './Clouds';
 
 const SceneContent = () => {
   return (
     <>
-      {/* Camera following UFO area */}
+      {/* Camera */}
       <PerspectiveCamera makeDefault position={[0, 25, 30]} fov={60} />
       <OrbitControls 
         enablePan={false}
@@ -22,12 +24,16 @@ const SceneContent = () => {
         target={[0, 0, 0]}
       />
 
-      {/* Lighting */}
-      <ambientLight intensity={0.4} />
+      {/* === LIGHTING — Dramatic Moonlit Night === */}
+      
+      {/* Soft ambient fill — deep blue tint */}
+      <ambientLight intensity={0.25} color="#6677aa" />
+      
+      {/* Main directional (moonlight) — silver-blue, strong shadows */}
       <directionalLight 
-        position={[10, 20, 10]} 
-        intensity={1.2}
-        color="#8888ff"
+        position={[-20, 30, -30]} 
+        intensity={1.5}
+        color="#aabbdd"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -38,33 +44,43 @@ const SceneContent = () => {
         shadow-camera-bottom={-50}
       />
 
-      {/* Moon light */}
-      <pointLight 
-        position={[-30, 40, -30]} 
-        intensity={1.5} 
-        color="#aaaaff" 
-        distance={100}
+      {/* Secondary fill from opposite side — warm purple */}
+      <directionalLight 
+        position={[20, 15, 20]} 
+        intensity={0.4}
+        color="#8866aa"
       />
 
-      {/* Fog for atmosphere */}
-      <fog attach="fog" args={['#1a1a2e', 30, 100]} />
+      {/* Hemisphere light for natural sky/ground color bleed */}
+      <hemisphereLight 
+        args={['#334466', '#1a2211', 0.3]}
+      />
 
-      {/* Starry sky */}
+      {/* === ATMOSPHERE === */}
+      
+      {/* Deep blue-purple fog */}
+      <fog attach="fog" args={['#0d0d1a', 35, 120]} />
+
+      {/* Starry sky — more stars, more depth */}
       <Stars 
         radius={100} 
-        depth={50} 
-        count={3000} 
+        depth={60} 
+        count={5000} 
         factor={4} 
-        saturation={0.5}
+        saturation={0.3}
         fade
       />
 
-      {/* Physics World */}
+      {/* Celestial objects */}
+      <Moon />
+      <Clouds />
+
+      {/* === PHYSICS WORLD === */}
       <Physics gravity={[0, -9.81, 0]} debug={false}>
         <UFO />
         <Ground />
         <Barn />
-        <CropCircles />
+        <HoloCubes />
         <TechCows />
         <Antenna />
       </Physics>
@@ -80,8 +96,10 @@ export const Scene = () => {
         gl={{ 
           antialias: true,
           alpha: false,
+          toneMapping: 3, // ACESFilmicToneMapping for cinematic look
+          toneMappingExposure: 1.2,
         }}
-        style={{ background: '#fdfdfd' }}
+        style={{ background: '#060610' }}
       >
         <Suspense fallback={null}>
           <SceneContent />
