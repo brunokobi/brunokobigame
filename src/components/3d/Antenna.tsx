@@ -1,34 +1,38 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { RigidBody, CuboidCollider, CylinderCollider } from '@react-three/rapier';
-import { Text } from '@react-three/drei';
+import { RigidBody, CuboidCollider } from '@react-three/rapier';
+import { Text, Edges } from '@react-three/drei';
 import { useGameStore } from '@/store/gameStore';
 import * as THREE from 'three';
 
+// --- COMPONENTE VOXEL MELHORADO ---
+const Voxel = ({ position, color }: { position: [number, number, number], color: string }) => (
+  <mesh position={position} castShadow receiveShadow>
+    <boxGeometry args={[1, 1, 1]} />
+    <meshStandardMaterial color={color} roughness={0.9} metalness={0.1} flatShading={true} />
+    <Edges color="#000000" threshold={15} scale={1.0} renderOrder={1000}>
+       <meshBasicMaterial transparent opacity={0.3} />
+    </Edges>
+  </mesh>
+);
+
 export const Antenna = () => {
   const { openModal } = useGameStore();
-  const rotatingGroupRef = useRef<THREE.Group>(null);
+  const towerRef = useRef<THREE.Group>(null);
   const dishRef = useRef<THREE.Group>(null);
-  const lightRef = useRef<THREE.PointLight>(null);
+  const blinkRef = useRef<THREE.PointLight>(null);
 
-  // Animação Complexa de Rastreamento
   useFrame((state) => {
     const time = state.clock.elapsedTime;
     
-    // 1. A Torre toda gira no eixo Y (Azimute)
-    if (rotatingGroupRef.current) {
-      rotatingGroupRef.current.rotation.y = Math.sin(time * 0.1) * 0.3; 
+    if (towerRef.current) {
+       const step = Math.floor(time * 4); 
+       const targetRotation = step * (Math.PI / 16); 
+       towerRef.current.rotation.y = THREE.MathUtils.lerp(towerRef.current.rotation.y, targetRotation, 0.1);
     }
 
-    // 2. O Prato inclina no eixo X (Elevação)
-    if (dishRef.current) {
-       // Offset de inclinação para parecer que está olhando para o céu
-      dishRef.current.rotation.x = -Math.PI / 4 + Math.sin(time * 0.15) * 0.1; 
-    }
-
-    // Luz piscando
-    if (lightRef.current) {
-      lightRef.current.intensity = Math.sin(time * 4) > 0 ? 3 : 0;
+    if (blinkRef.current) {
+      blinkRef.current.intensity = Math.floor(time * 4) % 2 === 0 ? 5 : 0;
     }
   });
 
@@ -36,147 +40,129 @@ export const Antenna = () => {
     openModal('contact');
   };
 
-  // Materiais
-  const concreteMat = new THREE.MeshStandardMaterial({ color: "#444444", roughness: 0.9 });
-  const trussMat = new THREE.MeshStandardMaterial({ color: "#eeeeee", metalness: 0.3, roughness: 0.4 }); // Branco industrial
-  const dishMat = new THREE.MeshStandardMaterial({ color: "#ffffff", metalness: 0.1, roughness: 0.3, side: THREE.DoubleSide });
-  const mechMat = new THREE.MeshStandardMaterial({ color: "#222222", metalness: 0.8, roughness: 0.5 }); // Metal escuro para mecanismos
+  const C_BASE = "#555555";
+  const C_DISH = "#DDDDDD";
+  const C_SUPPORT = "#333333";
+  const C_ACTIVE = "#FF3333";
+  const C_LIGHT = "#33FFFF";
 
   return (
-    <group position={[20, 0, -20]}>
+    // AJUSTE DE POSIÇÃO: Movi de X=5 para X=-5 (Mais para a esquerda)
+    <group position={[-5, 0.5, -20]}>
+      
       <RigidBody type="fixed" colliders={false}>
-        
-        {/* --- COLISORES SIMPLIFICADOS --- */}
-        <CuboidCollider args={[2, 0.5, 2]} position={[0, 0.5, 0]} /> {/* Base */}
-        <CuboidCollider args={[1.5, 4, 1.5]} position={[0, 4, 0]} /> {/* Torre */}
-        <CylinderCollider args={[2, 2.5]} position={[0, 9, 0]} rotation={[Math.PI/4, 0, 0]} /> {/* Prato aproximado */}
+        <CuboidCollider args={[2.5, 1, 2.5]} position={[0, 0.5, 0]} />
+        <CuboidCollider args={[2, 6, 2]} position={[0, 6, 0]} />
 
-        {/* --- VISUAL --- */}
+        {/* --- BASE DE PEDRA --- */}
+        <group position={[0, 0, 0]}>
+            {[-2, -1, 0, 1, 2].map(x => 
+                [-2, -1, 0, 1, 2].map(z => (
+                    <Voxel key={`b1-${x}-${z}`} position={[x, 0, z]} color={C_BASE} />
+                ))
+            )}
+             {[-1, 0, 1].map(x => 
+                [-1, 0, 1].map(z => (
+                    <Voxel key={`b2-${x}-${z}`} position={[x, 1, z]} color={C_BASE} />
+                ))
+            )}
+        </group>
 
-        {/* 1. Fundação de Concreto (Laje) */}
-        <mesh castShadow receiveShadow position={[0, 0.5, 0]}>
-          <boxGeometry args={[5, 1, 5]} />
-          <primitive object={concreteMat} />
-        </mesh>
-
-        {/* 2. Grupo Rotativo (Azimute) - A torre inteira gira */}
-        <group ref={rotatingGroupRef}>
+        {/* --- TORRE GIRATÓRIA --- */}
+        <group ref={towerRef} position={[0, 2, 0]}>
             
-            {/* Estrutura da Torre (4 Pernas / Treliça) */}
-            <group position={[0, 1, 0]}>
-                {/* Pernas inclinadas */}
-                {[45, 135, 225, 315].map((angle) => {
-                    const rad = angle * (Math.PI / 180);
-                    return (
-                        <mesh key={angle} position={[Math.sin(rad) * 1.5, 3, Math.cos(rad) * 1.5]} 
-                              rotation={[0.15, rad, 0]}> 
-                            <cylinderGeometry args={[0.2, 0.4, 6, 4]} />
-                            <primitive object={trussMat} />
-                        </mesh>
-                    );
-                })}
-                {/* Travessas em X (Simplificadas como anéis) */}
-                {[2, 4, 6].map((y, i) => (
-                    <mesh key={i} position={[0, y, 0]} rotation={[Math.PI/2, Math.PI/4, 0]}>
-                         {/* Usando Torus para simular a cinta da treliça */}
-                        <torusGeometry args={[1.2 - (i * 0.1), 0.1, 4, 4]} />
-                        <primitive object={trussMat} />
-                    </mesh>
-                ))}
+            {/* Pilar Central Grosso */}
+            {[0, 1, 2, 3].map(y => (
+                <group key={`pole-${y}`} position={[0, y, 0]}>
+                    <Voxel position={[0, 0, 0]} color={C_SUPPORT} />
+                    {y === 0 && (
+                        <>
+                            <Voxel position={[1, 0, 0]} color={C_SUPPORT} />
+                            <Voxel position={[-1, 0, 0]} color={C_SUPPORT} />
+                            <Voxel position={[0, 0, 1]} color={C_SUPPORT} />
+                            <Voxel position={[0, 0, -1]} color={C_SUPPORT} />
+                        </>
+                    )}
+                </group>
+            ))}
+            
+            {/* Cabeça do Motor */}
+            <group position={[0, 4, 0]}>
+                 {[-1, 0, 1].map(x => 
+                    [-1, 0, 1].map(z => (
+                        <Voxel key={`eng-${x}-${z}`} position={[x, 0, z]} color={C_BASE} />
+                    ))
+                )}
             </group>
 
-            {/* Plataforma Superior / Casa de Máquinas */}
-            <mesh position={[0, 7.5, 0]} castShadow>
-                <boxGeometry args={[3, 1.5, 3]} />
-                <primitive object={trussMat} />
-            </mesh>
-            
-            {/* Eixo de Elevação (Onde o prato prende) */}
-            <mesh position={[0, 8.5, 0]}>
-                <boxGeometry args={[1.5, 2, 1.5]} />
-                <primitive object={mechMat} />
-            </mesh>
 
-            {/* 3. O PRATO E SISTEMA ÓPTICO (Elevação) */}
-            <group ref={dishRef} position={[0, 9, 0]}>
+            {/* --- PRATO (Tigela) --- */}
+            <group ref={dishRef} position={[0, 5, 0]} rotation={[-Math.PI / 4, 0, 0]}> 
                 
-                {/* Estrutura Traseira (Backing Structure) - Dá peso ao prato */}
-                <mesh position={[0, 0, -1]} rotation={[Math.PI/2, 0, 0]}>
-                    <cylinderGeometry args={[1, 2, 1.5, 8]} />
-                    <primitive object={trussMat} />
-                </mesh>
+                <Voxel position={[0, 0, 0]} color={C_DISH} />
                 
-                {/* Contrapeso */}
-                <mesh position={[0, -1, -1.5]}>
-                    <boxGeometry args={[1, 1, 1]} />
-                    <primitive object={mechMat} />
-                </mesh>
+                <Voxel position={[1, 0, 0]} color={C_DISH} />
+                <Voxel position={[-1, 0, 0]} color={C_DISH} />
+                <Voxel position={[0, 1, 0]} color={C_DISH} />
+                <Voxel position={[0, -1, 0]} color={C_DISH} />
 
-                {/* O Prato Principal Parbólico */}
-                <mesh castShadow receiveShadow>
-                    <sphereGeometry args={[4, 32, 16, 0, Math.PI * 2, 0, 1.0]} />
-                    <primitive object={dishMat} />
-                </mesh>
-
-                {/* Tripé do Sub-refletor (Quadripod na verdade) */}
-                {[45, 135, 225, 315].map((angle) => {
-                    const rad = angle * (Math.PI / 180);
-                    return (
-                        <mesh key={angle} position={[0, 0, 0]} rotation={[0, 0, rad]}>
-                             <mesh position={[0, 1.8, 1.5]} rotation={[0.6, 0, 0]}>
-                                <cylinderGeometry args={[0.05, 0.05, 4.5, 4]} />
-                                <primitive object={trussMat} />
-                             </mesh>
-                        </mesh>
-                    );
-                })}
-
-                {/* Sub-refletor (O "Olho" no centro) */}
-                <group position={[0, 0, 3.5]}>
-                    <mesh castShadow rotation={[Math.PI/2, 0, 0]}>
-                         <cylinderGeometry args={[0.5, 0.2, 0.5, 16]} />
-                         <primitive object={mechMat} />
-                    </mesh>
-                    {/* Luz de status no receptor */}
-                    <mesh position={[0, 0, -0.3]}>
-                        <sphereGeometry args={[0.2]} />
-                        <meshStandardMaterial color="#00ff88" emissive="#00ff88" emissiveIntensity={2} />
-                    </mesh>
+                <group position={[0, 0, 1]}>
+                    <Voxel position={[2, 0, 0]} color={C_DISH} />
+                    <Voxel position={[-2, 0, 0]} color={C_DISH} />
+                    <Voxel position={[0, 2, 0]} color={C_DISH} />
+                    <Voxel position={[0, -2, 0]} color={C_DISH} />
+                    <Voxel position={[1, 1, 0]} color={C_DISH} />
+                    <Voxel position={[-1, 1, 0]} color={C_DISH} />
+                    <Voxel position={[1, -1, 0]} color={C_DISH} />
+                    <Voxel position={[-1, -1, 0]} color={C_DISH} />
                 </group>
 
-            </group> {/* Fim do Prato */}
+                 <group position={[0, 0, 2]}>
+                    {[-3, -2, -1, 0, 1, 2, 3].map(x => 
+                        [-3, -2, -1, 0, 1, 2, 3].map(y => {
+                            const dist = Math.sqrt(x*x + y*y);
+                            if (dist > 2.5 && dist < 3.8) {
+                                return <Voxel key={`rim-${x}-${y}`} position={[x, y, 0]} color={C_DISH} />
+                            }
+                            return null;
+                        })
+                    )}
+                 </group>
+                
+                {/* --- RECEPTOR --- */}
+                <group position={[0, 0, 1]}>
+                    <Voxel position={[0, 0, 0]} color={C_SUPPORT} />
+                    <Voxel position={[0, 0, 1]} color={C_SUPPORT} />
+                    <Voxel position={[0, 0, 2]} color={C_SUPPORT} />
+                    
+                    <Voxel position={[0, 0, 3]} color={C_ACTIVE} />
+                    
+                    <group position={[0, 0, 4]}>
+                        <Voxel position={[0, 0, 0]} color={C_LIGHT} />
+                        <pointLight ref={blinkRef} distance={8} decay={2} color={C_LIGHT} />
+                    </group>
+                </group>
 
-            {/* Luz de Aviação no topo da torre fixa */}
-            <mesh position={[1.2, 7.8, 1.2]}>
-                <sphereGeometry args={[0.15]} />
-                <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={3} />
-            </mesh>
-            <pointLight ref={lightRef} position={[1.2, 8, 1.2]} color="#ff0000" distance={10} decay={2} />
+            </group>
 
-        </group> {/* Fim do Grupo Rotativo */}
+        </group>
 
       </RigidBody>
 
-      {/* Sensor de Interação */}
       <RigidBody type="fixed" sensor>
-        <CuboidCollider 
-          args={[5, 6, 5]} 
-          position={[0, 3, 0]}
-          onIntersectionEnter={handleContact}
-        />
+        <CuboidCollider args={[6, 8, 6]} position={[0, 4, 0]} onIntersectionEnter={handleContact} />
       </RigidBody>
 
-      {/* Texto Holográfico */}
       <Text
         position={[0, 14, 0]}
-        fontSize={1}
-        color="#00ff88"
+        fontSize={2}
+        color={C_LIGHT}
         anchorX="center"
         anchorY="middle"
-        outlineWidth={0.05}
+        outlineWidth={0.1}
         outlineColor="#000000"
       >
-        Contato
+        CONTATO
       </Text>
     </group>
   );

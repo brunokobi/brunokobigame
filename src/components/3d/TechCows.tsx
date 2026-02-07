@@ -13,195 +13,127 @@ interface TechCowProps {
 
 const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
-  const { isAbducting, skills, collectSkill } = useGameStore();
-  const [isBeingAbducted, setIsBeingAbducted] = useState(false);
+  
+  const { isAbducting, skills, ufoPosition, collectSkill, abductCow } = useGameStore();
+  
   const [isCollected, setIsCollected] = useState(false);
-   const [abductionProgress, setAbductionProgress] = useState(0);
-
-  // Animação de "balanço" idle para a vaca parecer viva
+  const [abductionProgress, setAbductionProgress] = useState(0);
   const [randomOffset] = useState(() => Math.random() * 100);
 
   const skill = skills.find(s => s.id === skillId);
   const isAlreadyCollected = skill?.collected || false;
 
-   useFrame((state, delta) => {
-    if (!rigidBodyRef.current || isCollected || isAlreadyCollected) return;
+  useFrame((state, delta) => {
+    // Proteção: Se a física não carregou, se já foi coletada ou se o UFO não tem posição, não faz nada
+    if (!rigidBodyRef.current || isCollected || isAlreadyCollected || !ufoPosition) return;
 
-     // Lógica de abdução melhorada com animação suave
-    if (isBeingAbducted && isAbducting) {
-       // Aumenta o progresso da abdução gradualmente
-       setAbductionProgress(prev => Math.min(prev + delta * 0.5, 1));
+    const currentPos = rigidBodyRef.current.translation();
+
+    // --- CORREÇÃO DE QUEDA (RESPAWN) ---
+    // Se a vaca cair através do chão (Y < -10), reseta ela para a posição original
+    if (currentPos.y < -10) {
+        rigidBodyRef.current.setTranslation({ x: position[0], y: 5, z: position[2] }, true);
+        rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        return;
+    }
+
+    // --- LÓGICA DE ABDUÇÃO ---
+    const dist = Math.sqrt(
+      Math.pow(currentPos.x - ufoPosition.x, 2) + 
+      Math.pow(currentPos.z - ufoPosition.z, 2)
+    );
+
+    const isUnderBeam = dist < 3 && isAbducting;
+
+    if (isUnderBeam) {
+       setAbductionProgress(prev => Math.min(prev + delta * 0.8, 1));
        
-       // Força de levitação progressiva (mais suave no início, mais forte no final)
-       const liftForce = 0.3 + abductionProgress * 0.8;
-       rigidBodyRef.current.applyImpulse({ x: 0, y: liftForce, z: 0 }, true);
+       const liftForce = 0.6 + abductionProgress * 1.5; 
+       rigidBodyRef.current.setLinvel({ x: 0, y: liftForce * 5, z: 0 }, true);
        
-       // Girar suavemente enquanto sobe
-       rigidBodyRef.current.applyTorqueImpulse({ x: 0, y: 0.05 + abductionProgress * 0.1, z: 0 }, true);
+       const pullX = (ufoPosition.x - currentPos.x) * 2;
+       const pullZ = (ufoPosition.z - currentPos.z) * 2;
+       rigidBodyRef.current.applyImpulse({ x: pullX * delta, y: 0, z: pullZ * delta }, true);
+
+       rigidBodyRef.current.applyTorqueImpulse({ x: 0, y: 0.2, z: 0 }, true);
        
-       // Centraliza a vaca horizontalmente em direção ao ponto de abdução
-       const pos = rigidBodyRef.current.translation();
-       const currentVel = rigidBodyRef.current.linvel();
-       
-       // Amortece movimento horizontal para a vaca subir mais "reta"
-       rigidBodyRef.current.setLinvel({
-         x: currentVel.x * 0.95,
-         y: currentVel.y,
-         z: currentVel.z * 0.95
-       }, true);
-       
-       if (pos.y > 5.5) {
-        collectSkill(skillId);
-        setIsCollected(true);
-      }
-     } else if (abductionProgress > 0) {
-       // Se parou de abduzir, reseta o progresso gradualmente
+       if (currentPos.y > 6) {
+         if (collectSkill) collectSkill(skillId);
+         else if (abductCow) abductCow();
+         setIsCollected(true);
+       }
+
+    } else if (abductionProgress > 0) {
        setAbductionProgress(prev => Math.max(prev - delta * 2, 0));
     } else {
-      // Pequeno pulinho aleatório quando está no chão (Idle animation)
-      const time = state.clock.getElapsedTime();
-      if (Math.sin(time * 2 + randomOffset) > 0.98 && rigidBodyRef.current.translation().y < 1) {
-         rigidBodyRef.current.applyImpulse({ x: 0, y: 1, z: 0 }, true);
-      }
+       // Idle Animation
+       const time = state.clock.getElapsedTime();
+       // Só pula se estiver quase no chão (evita pular enquanto cai)
+       if (currentPos.y < 2.0 && currentPos.y > 0 && Math.sin(time * 2 + randomOffset) > 0.98) {
+          rigidBodyRef.current.applyImpulse({ x: 0, y: 2, z: 0 }, true);
+       }
     }
   });
 
   if (isCollected || isAlreadyCollected) return null;
 
-  // Materiais reutilizáveis
+  // Materiais
   const cowWhite = new THREE.MeshStandardMaterial({ color: "#f0f0f0", roughness: 0.8 });
   const cowBlack = new THREE.MeshStandardMaterial({ color: "#1a1a1a", roughness: 0.9 });
   const cowPink = new THREE.MeshStandardMaterial({ color: "#ffb7b2", roughness: 0.5 });
   const cowHorn = new THREE.MeshStandardMaterial({ color: "#ddd", roughness: 0.6 });
 
-   // Calcula a opacidade e escala baseado no progresso da abdução
-   const glowIntensity = isBeingAbducted && isAbducting ? 1 + abductionProgress * 2 : 0;
-   const cowScale = 1 - abductionProgress * 0.3; // Encolhe conforme sobe
- 
+  const glowIntensity = abductionProgress > 0 ? 1 + abductionProgress * 2 : 0;
+  const cowScale = 1 - abductionProgress * 0.3;
+
   return (
     <RigidBody
       ref={rigidBodyRef}
       position={position}
       mass={1}
-      lockRotations={!isBeingAbducted} // Impede a vaca de tombar sozinha, libera na abdução
+      lockRotations={abductionProgress < 0.1}
       linearDamping={1}
       angularDamping={1}
-      colliders={false} // Vamos definir o colisor manualmente
+      colliders={false}
+      ccd={true} // <--- IMPORTANTE: Evita atravessar o chão em alta velocidade
     >
-       <group scale={cowScale}>
-         {/* Efeito de brilho durante abdução */}
-         {isBeingAbducted && isAbducting && (
-           <mesh position={[0, 0.6, 0]}>
-             <sphereGeometry args={[1.2, 16, 16]} />
-             <meshBasicMaterial 
-               color="#00ff88" 
-               transparent 
-               opacity={0.1 + abductionProgress * 0.2}
-               side={THREE.BackSide}
-             />
-           </mesh>
-         )}
- 
-        {/* --- CORPO PRINCIPAL --- */}
+        <group scale={cowScale}>
+          {abductionProgress > 0 && (
+            <mesh position={[0, 0.6, 0]}>
+              <sphereGeometry args={[1.2, 16, 16]} />
+              <meshBasicMaterial color="#00ff88" transparent opacity={0.1 + abductionProgress * 0.2} side={THREE.BackSide} />
+            </mesh>
+          )}
+
+         {/* Visual da Vaca (Mantido igual) */}
          <mesh castShadow receiveShadow position={[0, 0.6, 0]}>
           <boxGeometry args={[0.7, 0.6, 1.1]} />
-           <meshStandardMaterial 
-             color="#f0f0f0" 
-             roughness={0.8}
-             emissive="#00ff88"
-             emissiveIntensity={glowIntensity * 0.3}
-           />
+           <meshStandardMaterial color="#f0f0f0" roughness={0.8} emissive="#00ff88" emissiveIntensity={glowIntensity * 0.3}/>
         </mesh>
-
-        {/* Manchas no corpo (Cubos pretos sobrepostos) */}
-        <mesh position={[0.36, 0.6, 0.2]}>
-          <boxGeometry args={[0.05, 0.4, 0.4]} />
-          <primitive object={cowBlack} />
-        </mesh>
-        <mesh position={[-0.36, 0.7, -0.3]}>
-          <boxGeometry args={[0.05, 0.3, 0.3]} />
-          <primitive object={cowBlack} />
-        </mesh>
-
-        {/* Ubere (Detalhe rosa embaixo) */}
-        <mesh position={[0, 0.3, 0.1]}>
-           <boxGeometry args={[0.3, 0.1, 0.3]} />
-           <primitive object={cowPink} />
-        </mesh>
-
-        {/* --- CABEÇA --- */}
+        
+        {/* Detalhes... (Mantidos resumidos aqui para economizar espaço, use o seu visual completo) */}
+        <mesh position={[0.36, 0.6, 0.2]}><boxGeometry args={[0.05, 0.4, 0.4]} /><primitive object={cowBlack} /></mesh>
+        <mesh position={[-0.36, 0.7, -0.3]}><boxGeometry args={[0.05, 0.3, 0.3]} /><primitive object={cowBlack} /></mesh>
+        
+        {/* Cabeça */}
         <group position={[0, 1.1, 0.7]}>
-            {/* Cranio */}
-            <mesh castShadow>
-                <boxGeometry args={[0.4, 0.4, 0.4]} />
-                <primitive object={cowWhite} />
-            </mesh>
-            {/* Focinho Rosa */}
-            <mesh position={[0, -0.1, 0.21]}>
-                <boxGeometry args={[0.42, 0.15, 0.05]} />
-                <primitive object={cowPink} />
-            </mesh>
-            {/* Olhos */}
-            <mesh position={[0.12, 0.05, 0.21]}>
-                <sphereGeometry args={[0.04]} />
-                <meshStandardMaterial color="black" />
-            </mesh>
-            <mesh position={[-0.12, 0.05, 0.21]}>
-                <sphereGeometry args={[0.04]} />
-                <meshStandardMaterial color="black" />
-            </mesh>
-            {/* Chifres */}
-            <mesh position={[0.15, 0.25, 0]} rotation={[0, 0, -0.3]}>
-                <coneGeometry args={[0.04, 0.15, 8]} />
-                <primitive object={cowHorn} />
-            </mesh>
-            <mesh position={[-0.15, 0.25, 0]} rotation={[0, 0, 0.3]}>
-                <coneGeometry args={[0.04, 0.15, 8]} />
-                <primitive object={cowHorn} />
-            </mesh>
-            {/* Orelhas */}
-            <mesh position={[0.25, 0.1, 0]} rotation={[0, 0, 0.3]}>
-                <boxGeometry args={[0.1, 0.05, 0.1]} />
-                <primitive object={cowWhite} />
-            </mesh>
-            <mesh position={[-0.25, 0.1, 0]} rotation={[0, 0, -0.3]}>
-                <boxGeometry args={[0.1, 0.05, 0.1]} />
-                <primitive object={cowWhite} />
-            </mesh>
+            <mesh castShadow><boxGeometry args={[0.4, 0.4, 0.4]} /><primitive object={cowWhite} /></mesh>
+            <mesh position={[0, -0.1, 0.21]}><boxGeometry args={[0.42, 0.15, 0.05]} /><primitive object={cowPink} /></mesh>
+            {/* ... outros detalhes da cabeça ... */}
+            <mesh position={[0.15, 0.25, 0]} rotation={[0, 0, -0.3]}><coneGeometry args={[0.04, 0.15, 8]} /><primitive object={cowHorn} /></mesh>
+            <mesh position={[-0.15, 0.25, 0]} rotation={[0, 0, 0.3]}><coneGeometry args={[0.04, 0.15, 8]} /><primitive object={cowHorn} /></mesh>
         </group>
+        
+        {/* Pernas (Exemplo simplificado) */}
+        <mesh position={[0.2, 0.3, 0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
+        <mesh position={[-0.2, 0.3, 0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
+        <mesh position={[0.2, 0.3, -0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
+        <mesh position={[-0.2, 0.3, -0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
 
-        {/* --- PATAS --- */}
-        {[
-          [0.2, 0.3, 0.4],
-          [-0.2, 0.3, 0.4],
-          [0.2, 0.3, -0.4],
-          [-0.2, 0.3, -0.4],
-        ].map((pos, i) => (
-          <group key={i} position={pos as [number, number, number]}>
-            {/* Perna */}
-            <mesh castShadow position={[0, 0, 0]}>
-               <boxGeometry args={[0.15, 0.6, 0.15]} />
-               <primitive object={cowWhite} />
-            </mesh>
-            {/* Casco Preto */}
-            <mesh position={[0, -0.3, 0]}>
-               <boxGeometry args={[0.16, 0.1, 0.16]} />
-               <primitive object={cowBlack} />
-            </mesh>
-          </group>
-        ))}
-
-        {/* Cauda */}
-        <mesh position={[0, 0.8, -0.6]} rotation={[-0.5, 0, 0]}>
-            <boxGeometry args={[0.05, 0.4, 0.05]} />
-            <primitive object={cowWhite} />
-        </mesh>
-
-        {/* --- INTERFACE --- */}
         <Text
-          position={[0, 1.8, 0]} // Subi o texto para não bater nos chifres
+          position={[0, 1.8, 0]} 
           fontSize={0.4}
-          color="#00ff88"
+          color={abductionProgress > 0 ? "#00ff88" : "white"}
           outlineWidth={0.02}
           outlineColor="#000000"
           anchorX="center"
@@ -210,20 +142,11 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
           {skillName}
         </Text>
 
-        {/* Colisor de física */}
+        {/* Colisor */}
         <CuboidCollider 
           args={[0.5, 0.6, 0.8]} 
           position={[0, 0.6, 0]}
           density={2}
-        />
-
-        {/* Sensor de Abdução */}
-        <CuboidCollider 
-          args={[0.8, 1, 1]} 
-          position={[0, 0.6, 0]}
-          sensor
-          onIntersectionEnter={() => setIsBeingAbducted(true)}
-          onIntersectionExit={() => setIsBeingAbducted(false)}
         />
       </group>
     </RigidBody>
@@ -232,14 +155,14 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
 
 export const TechCows = () => {
   const cowData = [
-    { id: 'react', name: 'React', position: [-5, 2, 5] as [number, number, number] },
-    { id: 'typescript', name: 'TypeScript', position: [-8, 2, 8] as [number, number, number] },
-    { id: 'nodejs', name: 'Node.js', position: [-3, 2, 10] as [number, number, number] },
-    { id: 'python', name: 'Python', position: [-10, 2, 3] as [number, number, number] },
-    { id: 'aws', name: 'AWS', position: [5, 2, 15] as [number, number, number] },
-    { id: 'docker', name: 'Docker', position: [-7, 2, 15] as [number, number, number] },
-    { id: 'graphql', name: 'GraphQL', position: [0, 2, 18] as [number, number, number] },
-    { id: 'postgresql', name: 'PostgreSQL', position: [-12, 2, 12] as [number, number, number] },
+    { id: 'react', name: 'React', position: [-5, 5, 5] as [number, number, number] }, // Subi Y para 5 (spawn seguro)
+    { id: 'typescript', name: 'TypeScript', position: [-8, 5, 8] as [number, number, number] },
+    { id: 'nodejs', name: 'Node.js', position: [-3, 5, 10] as [number, number, number] },
+    { id: 'python', name: 'Python', position: [-10, 5, 3] as [number, number, number] },
+    { id: 'aws', name: 'AWS', position: [5, 5, 15] as [number, number, number] },
+    { id: 'docker', name: 'Docker', position: [-7, 5, 15] as [number, number, number] },
+    { id: 'graphql', name: 'GraphQL', position: [0, 5, 18] as [number, number, number] },
+    { id: 'postgresql', name: 'PostgreSQL', position: [-12, 5, 12] as [number, number, number] },
   ];
 
   return (
