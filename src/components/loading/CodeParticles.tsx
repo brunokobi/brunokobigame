@@ -27,7 +27,6 @@ interface CodeParticle {
   id: number;
   text: string;
   x: number;
-  y: number;
   size: number;
   delay: number;
   duration: number;
@@ -39,7 +38,6 @@ const CodeParticles = () => {
       id: i,
       text: codeSnippets[Math.floor(Math.random() * codeSnippets.length)],
       x: Math.random() * 100,
-      y: Math.random() * 100,
       size: Math.random() * 0.5 + 0.6,
       delay: Math.random() * 15,
       duration: Math.random() * 10 + 15,

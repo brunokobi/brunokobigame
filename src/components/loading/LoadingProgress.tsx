@@ -21,7 +21,6 @@ const LoadingProgress = ({ progress, isComplete }: LoadingProgressProps) => {
     const interval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % messages.length);
     }, 1500);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -43,13 +42,14 @@ const LoadingProgress = ({ progress, isComplete }: LoadingProgressProps) => {
   }, [messageIndex]);
 
   return (
-    <div className={`relative z-10 flex flex-col items-center gap-8 px-4 transition-opacity duration-500 ${isComplete ? 'opacity-0' : 'opacity-100'}`}>
+    <div
+      className={`relative z-10 flex flex-col items-center gap-8 px-4 transition-opacity duration-500 ${
+        isComplete ? 'opacity-0' : 'opacity-100'
+      }`}
+    >
       {/* Main title */}
       <div className="text-center">
-        <h1 
-          className="font-orbitron text-3xl sm:text-4xl md:text-5xl font-bold tracking-wider text-foreground mb-2 glitch"
-          data-text="BRUNO KOBI"
-        >
+        <h1 className="font-orbitron text-3xl sm:text-4xl md:text-5xl font-bold tracking-wider text-foreground mb-2">
           BRUNO KOBI
         </h1>
         <div className="flex items-center justify-center gap-2 text-neon-green font-mono text-sm sm:text-base">
@@ -61,7 +61,13 @@ const LoadingProgress = ({ progress, isComplete }: LoadingProgressProps) => {
 
       {/* Status message with typing effect */}
       <div className="h-8 flex items-center">
-        <p className="font-mono text-sm sm:text-base text-muted-foreground border-r-2 border-neon-green pr-1 animate-[blink-cursor_1s_step-end_infinite]">
+        <p
+          className="font-mono text-sm sm:text-base text-muted-foreground pr-1"
+          style={{
+            borderRight: '2px solid hsl(var(--neon-green))',
+            animation: 'blink-cursor 1s step-end infinite',
+          }}
+        >
           {displayedText}
         </p>
       </div>
@@ -69,19 +75,22 @@ const LoadingProgress = ({ progress, isComplete }: LoadingProgressProps) => {
       {/* Progress bar */}
       <div className="w-full max-w-md">
         <div className="relative h-1 bg-secondary/50 rounded-full overflow-hidden">
-          {/* Progress fill */}
-          <div 
-            className="absolute inset-y-0 left-0 bg-neon-green rounded-full animate-progress-glow transition-all duration-300 ease-out"
-            style={{ width: `${progress}%` }}
+          <div
+            className="absolute inset-y-0 left-0 rounded-full animate-progress-glow transition-all duration-300 ease-out"
+            style={{
+              width: `${progress}%`,
+              background: `hsl(var(--neon-green))`,
+            }}
           />
-          
-          {/* Glow effect */}
-          <div 
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-neon-green to-transparent opacity-50 rounded-full blur-sm"
-            style={{ width: `${progress + 5}%` }}
+          <div
+            className="absolute inset-y-0 left-0 rounded-full blur-sm opacity-50"
+            style={{
+              width: `${Math.min(progress + 5, 100)}%`,
+              background: `linear-gradient(90deg, hsl(var(--neon-green)), transparent)`,
+            }}
           />
         </div>
-        
+
         {/* Progress percentage */}
         <div className="flex justify-between mt-3 font-mono text-xs text-muted-foreground">
           <span className="text-neon-green">[</span>

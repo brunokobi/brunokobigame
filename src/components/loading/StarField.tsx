@@ -22,18 +22,34 @@ const StarField = ({ count, layer, mouseOffset }: StarFieldProps) => {
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 200,
-      size: layer === 'front' ? Math.random() * 3 + 1.5 : layer === 'mid' ? Math.random() * 2 + 0.8 : Math.random() * 1.5 + 0.3,
-      opacity: layer === 'front' ? Math.random() * 0.5 + 0.5 : layer === 'mid' ? Math.random() * 0.4 + 0.3 : Math.random() * 0.3 + 0.1,
+      size:
+        layer === 'front'
+          ? Math.random() * 3 + 1.5
+          : layer === 'mid'
+            ? Math.random() * 2 + 0.8
+            : Math.random() * 1.5 + 0.3,
+      opacity:
+        layer === 'front'
+          ? Math.random() * 0.5 + 0.5
+          : layer === 'mid'
+            ? Math.random() * 0.4 + 0.3
+            : Math.random() * 0.3 + 0.1,
       animationDelay: `${Math.random() * 5}s`,
       animationDuration: `${Math.random() * 3 + 2}s`,
     }));
   }, [count, layer]);
 
-  const parallaxMultiplier = layer === 'front' ? 0.05 : layer === 'mid' ? 0.02 : 0.01;
-  const animationClass = layer === 'front' ? 'animate-stars-fast' : layer === 'mid' ? 'animate-stars-medium' : 'animate-stars-slow';
+  const parallaxMultiplier =
+    layer === 'front' ? 0.05 : layer === 'mid' ? 0.02 : 0.01;
+  const animationClass =
+    layer === 'front'
+      ? 'animate-stars-fast'
+      : layer === 'mid'
+        ? 'animate-stars-medium'
+        : 'animate-stars-slow';
 
   return (
-    <div 
+    <div
       className={`absolute inset-0 overflow-hidden ${animationClass}`}
       style={{
         transform: `translate(${mouseOffset.x * parallaxMultiplier}px, ${mouseOffset.y * parallaxMultiplier}px)`,
@@ -52,7 +68,10 @@ const StarField = ({ count, layer, mouseOffset }: StarFieldProps) => {
             opacity: star.opacity,
             animationDelay: star.animationDelay,
             animationDuration: star.animationDuration,
-            boxShadow: layer === 'front' ? `0 0 ${star.size * 2}px hsl(var(--star-white) / 0.5)` : 'none',
+            boxShadow:
+              layer === 'front'
+                ? `0 0 ${star.size * 2}px hsl(var(--star-white) / 0.5)`
+                : 'none',
           }}
         />
       ))}
