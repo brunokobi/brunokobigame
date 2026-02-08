@@ -52,7 +52,7 @@ const Road = () => {
 /* =========================================
    COMPONENTE: PLANTAÇÃO DE MILHO
    ========================================= */
-const CornField = ({ position = [0, 0, 0], rotation = [0, 0, 0] }) => {
+const CornField = ({ position = [0, 0, 0] as [number, number, number], rotation = [0, 0, 0] as [number, number, number] }) => {
   const COUNT = 400; 
   const SIZE = 25; 
 
@@ -100,7 +100,7 @@ const CornField = ({ position = [0, 0, 0], rotation = [0, 0, 0] }) => {
 /* =========================================
    COMPONENTE: TRATOR
    ========================================= */
-const Tractor = ({ position = [0, 0, 0], rotation = [0, 0, 0] }) => {
+const Tractor = ({ position = [0, 0, 0] as [number, number, number], rotation = [0, 0, 0] as [number, number, number] }) => {
   return (
     <group position={position} rotation={rotation as any}>
       <RigidBody type="fixed" colliders={false}>
@@ -189,7 +189,7 @@ const RockyHorizon = () => {
       
       {/* Nuvens ao fundo para dar acabamento */}
       <group position={[0, 20, -80]}>
-         <Cloud opacity={0.2} speed={0.1} segments={10} color="#8899aa" width={60} depth={10} />
+         <Cloud opacity={0.2} speed={0.1} segments={10} color="#8899aa" />
       </group>
     </group>
   );

@@ -3,7 +3,7 @@ import { Instance, Instances } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-export const CornField = ({ position = [0, 0, 0] }) => {
+export const CornField = ({ position = [0, 0, 0] as [number, number, number] }) => {
   const COUNT = 1000; // Aumentei para criar uma "parede" de milho
   const AREA_SIZE = 30; // Área um pouco maior
 

@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 
-export const Tractor = ({ position = [0, 0, 0], rotation = [0, 0, 0] }) => {
+export const Tractor = ({ position = [0, 0, 0] as [number, number, number], rotation = [0, 0, 0] as [number, number, number] }) => {
   return (
     <group position={position} rotation={rotation}>
       <RigidBody type="fixed" colliders={false}>
