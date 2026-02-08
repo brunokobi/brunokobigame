@@ -66,6 +66,19 @@ export default {
         },
         star: {
           yellow: "hsl(var(--star-yellow))",
+          white: "hsl(var(--star-white))",
+        },
+        neon: {
+          green: "hsl(var(--neon-green))",
+        },
+        nebula: {
+          core: "hsl(var(--nebula-core))",
+          light: "hsl(var(--nebula-light))",
+        },
+        space: {
+          deep: "hsl(var(--space-deep))",
+          mid: "hsl(var(--space-mid))",
+          light: "hsl(var(--space-light))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -81,6 +94,7 @@ export default {
       fontFamily: {
         space: ["Space Grotesk", "sans-serif"],
         mono: ["Space Mono", "monospace"],
+        orbitron: ["Orbitron", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
