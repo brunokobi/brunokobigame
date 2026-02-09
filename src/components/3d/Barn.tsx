@@ -151,7 +151,7 @@ export const Barn = () => {
       </RigidBody>
 
       {/* Sensor */}
-      <RigidBody type="fixed" sensor>
+      <RigidBody type="fixed" sensor canSleep={false}>
         <CuboidCollider 
           args={[3, 3, 3]} 
           position={[0, 1.5, 6]} 

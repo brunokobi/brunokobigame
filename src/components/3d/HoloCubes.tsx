@@ -3,14 +3,14 @@ import { useFrame } from '@react-three/fiber';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import { Text, Float } from '@react-three/drei';
 import { useGameStore } from '@/store/gameStore';
-import type { ProjectId } from '@/store/gameStore';
+import type { ProjectId } from '@/store/gameStore'; 
 import * as THREE from 'three';
 
 /* =========================================
    ITEM 1: PROJETOS (Pasta)
    ========================================= */
 const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
-  const { isAbducting, openProject } = useGameStore();
+  const { openProject } = useGameStore(); // Usamos a função padrão da store
   const [isHovering, setIsHovering] = useState(false);
   const folderGroupRef = useRef<THREE.Group>(null);
   const glowColor = '#ff4444';
@@ -21,15 +21,9 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
     }
   });
 
-  useFrame(() => {
-    if (isHovering && isAbducting) {
-      openProject('mobile' as ProjectId);
-    }
-  });
-
   return (
     <group position={position}>
-      {/* Base */}
+      {/* Base Visual */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
         <ringGeometry args={[1.5, 3, 32]} />
         <meshStandardMaterial color="#1a0a0a" roughness={1} opacity={0.5} transparent />
@@ -37,7 +31,7 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
 
       <Float speed={2} rotationIntensity={0.2} floatIntensity={1}>
         <group ref={folderGroupRef} position={[0, 4, 0]} scale={1.5}> 
-          {/* Pasta */}
+          {/* Pasta Visual */}
           <mesh position={[0, -0.1, 0]}>
             <boxGeometry args={[1.8, 0.15, 1.4]} />
             <meshStandardMaterial color="#d4a853" roughness={0.8} metalness={0.1} emissive={isHovering ? "#d4a853" : "#000000"} emissiveIntensity={isHovering ? 0.2 : 0} />
@@ -59,14 +53,20 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
         PROJETOS
       </Text>
 
-      {isHovering && (
-        <Text position={[0, 2, 0]} fontSize={0.35} color="#ffaa44" anchorX="center" anchorY="middle">
-          Segure ESPAÇO
-        </Text>
-      )}
-
-      <RigidBody type="fixed" sensor>
-        <CuboidCollider args={[2, 4, 2]} position={[0, 3, 0]} onIntersectionEnter={() => setIsHovering(true)} onIntersectionExit={() => setIsHovering(false)} />
+      {/* --- FÍSICA E COLISÃO --- */}
+      <RigidBody type="fixed" colliders={false} canSleep={false}>
+        <CuboidCollider 
+            args={[3, 5, 3]} // Aumentei um pouco a hitbox para facilitar
+            position={[0, 3, 0]} 
+            onCollisionEnter={({ other }) => {
+                if (other.rigidBodyObject?.name === "player") {
+                    setIsHovering(true);
+                    // Abre o modal carregando o conteúdo de 'projetos'
+                    openProject('projetos' as ProjectId);
+                }
+            }}
+            onCollisionExit={() => setIsHovering(false)}
+        />
       </RigidBody>
 
       {isHovering && <pointLight position={[0, 4, 0]} color={glowColor} intensity={10} distance={8} />}
@@ -75,10 +75,12 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
 };
 
 /* =========================================
-   ITEM 2: MAPA (Globo)
+   ITEM 2: MAPA (Globo / MAPAS)
    ========================================= */
 const MapCube = ({ position }: { position: [number, number, number] }) => {
-  const { isAbducting, openProject } = useGameStore();
+  // CORREÇÃO: Usamos 'openProject' aqui também, passando o ID 'mapas'
+  const { openProject } = useGameStore(); 
+  
   const [isHovering, setIsHovering] = useState(false);
   const globeRef = useRef<THREE.Group>(null);
   const glowColor = '#4488ff';
@@ -89,15 +91,8 @@ const MapCube = ({ position }: { position: [number, number, number] }) => {
     }
   });
 
-  useFrame(() => {
-    if (isHovering && isAbducting) {
-      openProject('saas' as ProjectId);
-    }
-  });
-
   return (
     <group position={position}>
-      {/* Base */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
         <ringGeometry args={[1.5, 3, 32]} />
         <meshStandardMaterial color="#0a0a1a" roughness={1} opacity={0.5} transparent />
@@ -105,7 +100,7 @@ const MapCube = ({ position }: { position: [number, number, number] }) => {
 
       <Float speed={2} rotationIntensity={0.2} floatIntensity={1}>
         <group ref={globeRef} position={[0, 4, 0]} scale={1.3}>
-          {/* Globo */}
+          {/* Globo Visual */}
           <mesh>
             <sphereGeometry args={[1, 32, 32]} />
             <meshStandardMaterial color="#1a4488" emissive="#0a2244" emissiveIntensity={0.5} roughness={0.6} metalness={0.3} />
@@ -119,17 +114,23 @@ const MapCube = ({ position }: { position: [number, number, number] }) => {
       </Float>
 
       <Text position={[0, 7, 0]} fontSize={0.55} color="#6699ff" anchorX="center" anchorY="middle" outlineWidth={0.02} outlineColor="#000000">
-        MAPA
+        MAPAS
       </Text>
 
-      {isHovering && (
-        <Text position={[0, 2, 0]} fontSize={0.35} color="#ffaa44" anchorX="center" anchorY="middle">
-          Segure ESPAÇO
-        </Text>
-      )}
-
-      <RigidBody type="fixed" sensor>
-        <CuboidCollider args={[2, 4, 2]} position={[0, 3, 0]} onIntersectionEnter={() => setIsHovering(true)} onIntersectionExit={() => setIsHovering(false)} />
+      {/* --- FÍSICA E COLISÃO --- */}
+      <RigidBody type="fixed" colliders={false}>
+        <CuboidCollider 
+            args={[3, 5, 3]} // Hitbox generosa
+            position={[0, 3, 0]} 
+            onCollisionEnter={({ other }) => {
+                if (other.rigidBodyObject?.name === "player") {
+                    setIsHovering(true);
+                    // AQUI: Abre o modal carregando o conteúdo de 'mapas'
+                    openProject('mapas' as ProjectId);
+                }
+            }}
+            onCollisionExit={() => setIsHovering(false)}
+        />
       </RigidBody>
 
       {isHovering && <pointLight position={[0, 4, 0]} color={glowColor} intensity={12} distance={8} />}
@@ -143,10 +144,6 @@ const MapCube = ({ position }: { position: [number, number, number] }) => {
 export const HoloCubes = () => {
   return (
     <group>
-      {/* Movi 10 unidades para a direita (X positivo) para limpar a área das vacas.
-         - Projetos: 8, 0, 8
-         - Mapa: 18, 0, 8 
-      */}
       <ProjectsCube position={[8, 0, 8]} />
       <MapCube position={[18, 0, 8]} />
     </group>

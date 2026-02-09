@@ -3,8 +3,10 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import { Stars, PerspectiveCamera, OrbitControls, Cloud, Environment, Instance, Instances } from '@react-three/drei';
 import * as THREE from 'three';
+
+// Importação dos seus componentes externos
 import { UFO } from './UFO';
-import { Ground } from './Ground';
+import { Ground } from './Ground'; // Certifique-se que o Ground tem RigidBody!
 import { Barn } from './Barn';
 import { HoloCubes } from './HoloCubes';
 import { TechCows } from './TechCows';
@@ -16,11 +18,10 @@ import { Moon } from './Moon';
    ========================================= */
 const Road = () => {
   const LENGTH = 500; 
-  const WIDTH = 7; // Estreita (era 14)
+  const WIDTH = 7; 
   
   const stripePositions = useMemo(() => {
     const arr = [];
-    // Espaçamento maior (20m) típico de estradas rurais simples
     for (let i = -LENGTH / 2; i < LENGTH / 2; i += 20) arr.push(i); 
     return arr;
   }, []);
@@ -31,13 +32,13 @@ const Road = () => {
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[WIDTH, LENGTH]} />
         <meshStandardMaterial 
-            color="#222222"      // Cinza chumbo
+            color="#222222"      // Cinza chumbo escuro
             roughness={0.9}      // Bem áspero
-            metalness={0.1}      // Pouco reflexo
+            metalness={0.1}      
         />
       </mesh>
 
-      {/* Faixas Centrais (Amarelo queimado e finas) */}
+      {/* Faixas Centrais */}
       <Instances range={stripePositions.length}>
         <planeGeometry args={[0.15, 3]} /> 
         <meshBasicMaterial color="#ccbb55" opacity={0.7} transparent /> 
@@ -98,13 +99,16 @@ const CornField = ({ position = [0, 0, 0] as [number, number, number], rotation 
 };
 
 /* =========================================
-   COMPONENTE: TRATOR
+   COMPONENTE: TRATOR (Obstáculo Físico)
    ========================================= */
 const Tractor = ({ position = [0, 0, 0] as [number, number, number], rotation = [0, 0, 0] as [number, number, number] }) => {
   return (
     <group position={position} rotation={rotation as any}>
+      {/* RigidBody Fixed para o UFO bater nele e não atravessar */}
       <RigidBody type="fixed" colliders={false}>
         <CuboidCollider args={[1.5, 2, 2.5]} position={[0, 2, 0]} />
+        
+        {/* Visual do Trator */}
         <mesh position={[0, 1.2, 0]} castShadow><boxGeometry args={[1.8, 1, 3.5]} /><meshStandardMaterial color="#aa0000" roughness={0.2} /></mesh>
         <group position={[0, 2.2, 0.5]}>
            <mesh castShadow><boxGeometry args={[1.6, 1.5, 1.8]} /><meshStandardMaterial color="#880000" /></mesh>
@@ -124,6 +128,7 @@ const Tractor = ({ position = [0, 0, 0] as [number, number, number], rotation = 
             <mesh position={[0, 0.21, 0]}><circleGeometry args={[0.3, 16]} /><meshStandardMaterial color="#ddcc00" /></mesh>
           </mesh>
         ))}
+        {/* Faróis do Trator */}
         <group position={[0, 1.2, -1.8]}>
            {[-0.5, 0.5].map((x, i) => (
              <group key={i} position={[x, 0, 0]}>
@@ -138,13 +143,13 @@ const Tractor = ({ position = [0, 0, 0] as [number, number, number], rotation = 
 };
 
 /* =========================================
-   HORIZONTE ROCHOSO (AJUSTADO: FUNDO + DIREITA DISTANTE)
+   COMPONENTE: HORIZONTE ROCHOSO
    ========================================= */
 const RockyHorizon = () => {
   const rocks = useMemo(() => {
     const items = [];
-    const count = 120; // Reduzi de 200 para 120 para ficar menos denso
-    const minRadius = 90; // Aumentei o raio mínimo para afastar mais
+    const count = 120;
+    const minRadius = 90;
     const maxRadius = 180;
 
     for (let i = 0; i < count; i++) {
@@ -153,19 +158,12 @@ const RockyHorizon = () => {
       const x = Math.sin(angle) * r;
       const z = Math.cos(angle) * r;
 
-      // --- LÓGICA DE FILTRO (REFINADA) ---
-      // Aceita se:
-      // 1. Estiver no Fundo Profundo (Z < -50)
-      // 2. OU Estiver BEM na Direita (X > 80) e um pouco recuada (Z < 10)
-      //    Isso garante que "apenas um pouco" apareça na direita, bem longe.
+      // Filtro para posicionar pedras apenas no fundo e na direita distante
       const isBackground = z < -50;
       const isFarRight = x > 80 && z < 10;
 
-      if (!isBackground && !isFarRight) {
-        continue; // Pula a pedra se não for fundo nem direita distante
-      }
+      if (!isBackground && !isFarRight) continue;
 
-      // Variação de tamanho
       const scaleW = 15 + Math.random() * 20; 
       const scaleH = 20 + Math.random() * 30; 
       
@@ -186,8 +184,6 @@ const RockyHorizon = () => {
           <meshStandardMaterial color="#1a1a2e" roughness={0.9} metalness={0.1} flatShading={true} />
         </mesh>
       ))}
-      
-      {/* Nuvens ao fundo para dar acabamento */}
       <group position={[0, 20, -80]}>
          <Cloud opacity={0.2} speed={0.1} segments={10} color="#8899aa" />
       </group>
@@ -196,17 +192,20 @@ const RockyHorizon = () => {
 };
 
 /* =========================================
-   CONTEÚDO DA CENA
+   CONTEÚDO DA CENA PRINCIPAL
    ========================================= */
 const SceneContent = () => {
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 25, 55]} fov={55} />
+      {/* Limites da câmera para não ver o "fim do mundo" */}
       <OrbitControls enablePan={false} minDistance={15} maxDistance={80} maxPolarAngle={Math.PI / 2.05} target={[0, 0, 0]} />
 
+      {/* Iluminação Noturna */}
       <ambientLight intensity={0.1} color="#444455" />
       <directionalLight position={[-50, 40, -50]} intensity={2.5} color="#aaddff" castShadow shadow-bias={-0.0001} />
       <spotLight position={[50, 20, 50]} intensity={1} color="#aa88cc" angle={1} penumbra={1} />
+      
       <Environment preset="night" blur={0.6} background={false} />
       <fogExp2 attach="fog" args={['#050510', 0.012]} /> 
       <Stars radius={120} depth={50} count={7000} factor={4} saturation={0} fade speed={1} />
@@ -214,12 +213,13 @@ const SceneContent = () => {
       <Moon />
       <RockyHorizon />
 
+      {/* MUNDO FÍSICO */}
       <Physics gravity={[0, -9.81, 0]}>
         
-        {/* ESTRADA NOVA (ESTREITA) */}
+        {/* Estrada e Jogador */}
         <Road />
-        <UFO />
-        <Ground />
+        <UFO /> 
+        <Ground /> {/* Importante ter RigidBody aqui dentro */}
 
         {/* LADO ESQUERDO: ZONA RURAL */}
         <group position={[-25, 0, 0]}>
@@ -233,9 +233,7 @@ const SceneContent = () => {
         </group>
 
         {/* LADO DIREITO: ZONA TECH */}
-        {/* Antena mantida em X=6 (colada no celeiro) */}
         <group position={[25, 0, 0]}>
-           
            <group position={[0, 0, -5]} rotation={[0, -0.2, 0]}>
              <Barn />
            </group>
@@ -244,7 +242,9 @@ const SceneContent = () => {
              <Antenna />
            </group>
 
+           {/* HOLOCUBES (Aqui acontece a mágica dos modais) */}
            <group position={[0, 0, 10]}>
+             {/* Posição ajustada: X ~ 12 (Direita) */}
              <group position={[-13, 0, 0]}> 
                 <HoloCubes /> 
              </group>

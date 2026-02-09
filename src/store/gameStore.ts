@@ -1,8 +1,10 @@
 import { create } from 'zustand';
-import * as THREE from 'three'; // <--- 1. IMPORTANTE: Importar THREE para usar Vector3
+import * as THREE from 'three'; 
 
 export type Section = 'about' | 'projects' | 'contact' | null;
-export type ProjectId = 'ecommerce' | 'saas' | 'mobile' | null;
+
+// CORREÇÃO AQUI: Atualizei os nomes para baterem com o seu Modals.tsx
+export type ProjectId = 'ecommerce' | 'mapas' | 'projetos' | null;
 
 interface Skill {
   id: string;
@@ -14,27 +16,29 @@ interface GameState {
   // UI State
   currentSection: Section;
   currentProject: ProjectId;
+  
+  // Estado para o Pop-up de texto simples (Toast)
+  holocubeContent: string | null; 
+  
   isAbducting: boolean;
   
   // Game Stats
   score: number;
   skills: Skill[];
 
-  // --- 2. NOVO: Posição do UFO para as vacas lerem ---
+  // Posição do UFO
   ufoPosition: THREE.Vector3; 
   
   // Actions
   openModal: (section: Section) => void;
   closeModal: () => void;
-  openProject: (projectId: ProjectId) => void;
-  setAbducting: (value: boolean) => void;
+  openProject: (projectId: ProjectId) => void; // Abre o modal de projetos com o ID específico
   
-  // --- 3. NOVO: Ação para atualizar posição do UFO ---
+  interactWithHolocube: (content: string) => void; // Abre apenas o toast de texto
+
+  setAbducting: (value: boolean) => void;
   setUfoPosition: (pos: THREE.Vector3) => void;
-
-  // --- 4. NOVO: Ação genérica para quando abduzir uma vaca ---
   abductCow: () => void; 
-
   collectSkill: (skillId: string) => void;
   resetGame: () => void;
 }
@@ -46,7 +50,7 @@ const initialSkills: Skill[] = [
   { id: 'python', name: 'Python', collected: false },
   { id: 'aws', name: 'AWS', collected: false },
   { id: 'docker', name: 'Docker', collected: false },
-  { id: 'graphql', name: 'GraphQL', collected: false },
+  { id: 'php', name: 'PHP', collected: false },
   { id: 'postgresql', name: 'PostgreSQL', collected: false },
 ];
 
@@ -54,30 +58,45 @@ export const useGameStore = create<GameState>((set) => ({
   // Initial State
   currentSection: null,
   currentProject: null,
+  holocubeContent: null,
   isAbducting: false,
   score: 0,
   skills: initialSkills,
   
-  // Inicializa a posição do UFO no centro
   ufoPosition: new THREE.Vector3(0, 0, 0),
 
   // Actions
-  openModal: (section) => set({ currentSection: section, currentProject: null }),
-  closeModal: () => set({ currentSection: null, currentProject: null }),
-  openProject: (projectId) => set({ currentProject: projectId, currentSection: 'projects' }),
   
+  // Abre modais gerais (Sobre, Contato)
+  openModal: (section) => set({ 
+    currentSection: section, 
+    currentProject: null, 
+    holocubeContent: null 
+  }),
+  
+  // Fecha tudo
+  closeModal: () => set({ 
+    currentSection: null, 
+    currentProject: null, 
+    holocubeContent: null 
+  }),
+  
+  // Abre modal de Projeto Específico (Mapas, Projetos, Ecommerce)
+  openProject: (projectId) => set({ 
+    currentProject: projectId, 
+    currentSection: 'projects', // Isso força o Modals.tsx a renderizar o <ProjectModal />
+    holocubeContent: null 
+  }),
+  
+  // Abre apenas mensagem de texto
+  interactWithHolocube: (content) => set({ holocubeContent: content }),
+
   setAbducting: (value) => set({ isAbducting: value }),
   
-  // Atualiza a posição (Chamado pelo componente UFO.tsx a cada frame)
   setUfoPosition: (pos) => set({ ufoPosition: pos }),
 
-  // Lógica da Abdução da Vaca
   abductCow: () => set((state) => {
-    // 1. Aumenta o score
     const newScore = state.score + 1;
-
-    // 2. (Opcional) Desbloqueia a próxima skill da lista que ainda não foi pega
-    // Isso faz com que cada vaca dê uma skill nova
     const nextUncollectedSkill = state.skills.find(s => !s.collected);
     let newSkills = state.skills;
 
@@ -93,7 +112,6 @@ export const useGameStore = create<GameState>((set) => ({
     };
   }),
   
-  // Mantivemos o collectSkill caso você tenha itens específicos flutuando (logos)
   collectSkill: (skillId) => set((state) => {
     const skill = state.skills.find(s => s.id === skillId);
     if (skill && !skill.collected) {
@@ -112,6 +130,7 @@ export const useGameStore = create<GameState>((set) => ({
     skills: initialSkills,
     currentSection: null,
     currentProject: null,
+    holocubeContent: null,
     ufoPosition: new THREE.Vector3(0, 0, 0),
   }),
 }));

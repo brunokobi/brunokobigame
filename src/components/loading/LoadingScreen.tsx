@@ -34,6 +34,7 @@ const LoadingScreen = () => {
 
   useEffect(() => {
     const startTime = Date.now();
+    let animationFrameId: number;
 
     const updateProgress = () => {
       const elapsed = Date.now() - startTime;
@@ -41,7 +42,7 @@ const LoadingScreen = () => {
       setProgress(newProgress);
 
       if (newProgress < 100) {
-        requestAnimationFrame(updateProgress);
+        animationFrameId = requestAnimationFrame(updateProgress);
       } else {
         setIsComplete(true);
         setTimeout(() => {
@@ -53,7 +54,10 @@ const LoadingScreen = () => {
       }
     };
 
-    requestAnimationFrame(updateProgress);
+    animationFrameId = requestAnimationFrame(updateProgress);
+
+    // Cleanup para evitar vazamento de memória se o componente desmontar
+    return () => cancelAnimationFrame(animationFrameId);
   }, [navigate]);
 
   return (
@@ -65,8 +69,9 @@ const LoadingScreen = () => {
         background: `linear-gradient(180deg, hsl(var(--space-deep)) 0%, hsl(var(--space-mid)) 50%, hsl(var(--space-light)) 100%)`,
       }}
     >
-      {/* Scanline overlay */}
-      <div className="absolute inset-0 scanline pointer-events-none" />
+      {/* NOTA: Elementos de fundo vêm primeiro. 
+         A ordem importa para o empilhamento natural (stacking context).
+      */}
 
       {/* Parallax star layers */}
       <StarField count={200} layer="back" mouseOffset={mouseOffset} />
@@ -86,9 +91,14 @@ const LoadingScreen = () => {
       <UFOElement mouseOffset={mouseOffset} />
 
       {/* Centered loading progress */}
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center z-40">
         <LoadingProgress progress={progress} isComplete={isComplete} />
       </div>
+
+      {/* CORREÇÃO: O Scanline deve ser o ÚLTIMO elemento ou ter o maior Z-INDEX.
+         Adicionei 'z-50' para garantir que fique acima do UFO e das estrelas.
+      */}
+      <div className="absolute inset-0 scanline pointer-events-none z-50" />
     </div>
   );
 };

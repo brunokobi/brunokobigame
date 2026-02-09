@@ -161,7 +161,7 @@ export const TechCows = () => {
     { id: 'python', name: 'Python', position: [-10, 5, 3] as [number, number, number] },
     { id: 'aws', name: 'AWS', position: [5, 5, 15] as [number, number, number] },
     { id: 'docker', name: 'Docker', position: [-7, 5, 15] as [number, number, number] },
-    { id: 'graphql', name: 'GraphQL', position: [0, 5, 18] as [number, number, number] },
+    { id: 'php', name: 'PHP', position: [0, 5, 18] as [number, number, number] },
     { id: 'postgresql', name: 'PostgreSQL', position: [-12, 5, 12] as [number, number, number] },
   ];
 

@@ -223,22 +223,7 @@
     }
   }
 
-  /* Loading Screen Animations */
-  .scanline {
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      hsl(210 100% 50% / 0.03) 2px,
-      hsl(210 100% 50% / 0.03) 4px
-    );
-    animation: scanline-scroll 8s linear infinite;
-  }
-
-  @keyframes scanline-scroll {
-    0% { background-position: 0 0; }
-    100% { background-position: 0 100vh; }
-  }
+  /* --- ANIMATIONS & EFFECTS --- */
 
   @keyframes stars-scroll-slow {
     0% { transform: translateY(0); }
@@ -329,4 +314,57 @@
     0%, 100% { border-color: hsl(140 100% 50%); }
     50% { border-color: transparent; }
   }
+}
+
+/* --- EFEITO SCANNER REALISTA (AZUL INTENSO) --- */
+/* --- EFEITO LASER SCANNER (LINHA FINA E INTENSA) --- */
+
+@keyframes scan-laser {
+  0% {
+    top: -10%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1; /* Acende ao entrar na tela */
+  }
+  90% {
+    opacity: 1; /* Mantém aceso até o fim */
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.scanline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  /* Removi o fundo listrado para ficar limpo e focar só na linha */
+  background: transparent; 
+}
+
+.scanline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  
+  /* --- AQUI ESTÁ A MÁGICA DA LINHA FINA --- */
+  height: 1px; /* Espessura física da linha */
+  
+  /* Cor sólida da linha (Ciano Elétrico) */
+  background: hsl(140 100% 50% / 0.5); 
+  
+  /* O "Glow" que dá a intensidade realista */
+  box-shadow: 
+    0 0 1px hsl(140 100% 50% / 0.5),        /* Brilho curto e forte */
+    0 0 1px hsl(140 100% 50% / 0.5),        /* Halo médio */
+    0 0 25px  hsl(140 100% 50% / 0.9); /* Brilho difuso azulado */
+
+  /* Animação suave */
+  animation: scan-laser 4s linear infinite;
 }

@@ -3,10 +3,55 @@ import { HUD } from '@/components/ui/HUD';
 import { Tutorial } from '@/components/ui/Tutorial';
 import { Modals } from '@/components/ui/Modals';
 import { SkillToast } from '@/components/ui/SkillToast';
- import { MobileControls } from '@/components/ui/MobileControls';
+import { MobileControls } from '@/components/ui/MobileControls';
 import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { Volume2, VolumeX } from 'lucide-react'; // Ícones de som
 
 const Index = () => {
+  // --- Configuração do Áudio ---
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    // 1. Cria o objeto de áudio
+    audioRef.current = new Audio('/sounds/fundo.mp3');
+    audioRef.current.loop = true; // Repetir música
+    audioRef.current.volume = 0.3; // Volume baixo (30%)
+
+    // 2. Tenta tocar (Autoplay policy pode bloquear)
+    const tryPlay = async () => {
+      try {
+        if (audioRef.current) {
+          await audioRef.current.play();
+          setIsPlaying(true);
+        }
+      } catch (err) {
+        console.log("Autoplay bloqueado, aguardando clique do usuário.");
+        setIsPlaying(false);
+      }
+    };
+    tryPlay();
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const toggleAudio = () => {
+    if (!audioRef.current) return;
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-background">
       {/* 3D Scene */}
@@ -17,7 +62,15 @@ const Index = () => {
       <Tutorial />
       <Modals />
       <SkillToast />
-       <MobileControls />
+      <MobileControls />
+
+      {/* --- Botão de Música --- */}
+      <button 
+        onClick={toggleAudio}
+        className="fixed top-6 right-6 z-50 p-3 bg-black/40 backdrop-blur-md rounded-full border border-white/10 hover:bg-white/20 transition-all text-white shadow-lg shadow-cyan-500/20"
+      >
+        {isPlaying ? <Volume2 size={24} /> : <VolumeX size={24} />}
+      </button>
 
       {/* Title */}
       <motion.div 

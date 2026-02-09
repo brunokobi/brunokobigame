@@ -56,23 +56,30 @@ export const UFO = () => {
     if (KeyA) x -= 1;
     if (KeyD) x += 1;
 
+    // Joystick Mobile
     x += mobileJoystickState.x;
     z += mobileJoystickState.y;
 
+    // Normalização do vetor
     if (x !== 0 || z !== 0) {
       const length = Math.sqrt(x * x + z * z);
-      if (length > 1) { x /= length; z /= length; }
+      if (length > 1) { 
+        x /= length; 
+        z /= length; 
+      }
     }
 
     const velocityX = x * MOVE_SPEED;
     const velocityZ = z * MOVE_SPEED;
 
+    // Aplica a velocidade linear
     rigidBodyRef.current.setLinvel({ x: velocityX, y: 0, z: velocityZ }, true);
 
+    // Atualiza posição na store
     const currentPos = rigidBodyRef.current.translation();
     setUfoPosition(new THREE.Vector3(currentPos.x, currentPos.y, currentPos.z));
 
-    // 2. ANIMAÇÕES PROCEDURAIS
+    // 2. ANIMAÇÕES VISUAIS
     const targetTiltX = z * MAX_TILT;
     const targetTiltZ = -x * MAX_TILT;
 
@@ -93,11 +100,16 @@ export const UFO = () => {
   return (
     <RigidBody
       ref={rigidBodyRef}
+      name="player"
+      type="dynamic"
       position={[0, 4, 0]}
       gravityScale={0}
       lockRotations={true}
-      linearDamping={0.8}
-      colliders="hull"
+      linearDamping={2}
+      colliders="hull" 
+      // --- CORREÇÕES PARA COLISÃO INSTANTÂNEA ---
+      ccd={true}         // Ativa detecção contínua (evita que o UFO pule o frame da colisão)
+      canSleep={false}   // Impede que o corpo entre em "sleep mode" (sempre ativo)
     >
       <group ref={shipGroupRef}>
         
@@ -106,8 +118,6 @@ export const UFO = () => {
           <cylinderGeometry args={[1.8, 0.8, 0.5, 32]} />
           <meshStandardMaterial color="#2a2a2a" metalness={0.8} roughness={0.3} envMapIntensity={1} />
         </mesh>
-
-        {/* --- ANEL REMOVIDO AQUI --- */}
         
         {/* CÚPULA DE VIDRO */}
         <mesh position={[0, 0.35, 0]}>
