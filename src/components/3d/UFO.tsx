@@ -15,29 +15,65 @@ export const UFO = () => {
   const ringRef = useRef<THREE.Group>(null);
   const beamRef = useRef<THREE.Mesh>(null);
 
+  // Ref para o áudio de abdução
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const { isAbducting, setAbducting, setUfoPosition } = useGameStore();
   
   const [lightTarget] = useState(() => new THREE.Object3D());
   const keysPressed = useRef({ KeyW: false, KeyA: false, KeyS: false, KeyD: false });
 
+  // 1. Inicializa o áudio e o target da luz
   useEffect(() => {
     lightTarget.position.set(0, -10, 0);
+    
+    // Configura o som
+    audioRef.current = new Audio('/sounds/abdusao.wav');
+    audioRef.current.loop = true; // Deixa em loop enquanto segura a tecla
+    audioRef.current.volume = 0.5;
   }, [lightTarget]);
 
+  // 2. Controles de Teclado (Adicionado 'Enter' e Áudio)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code in keysPressed.current) keysPressed.current[e.code as keyof typeof keysPressed.current] = true;
-      if (e.code === 'Space') setAbducting(true);
+      // Movimento
+      if (e.code in keysPressed.current) {
+        keysPressed.current[e.code as keyof typeof keysPressed.current] = true;
+      }
+
+      // Abdução (Espaço OU Enter)
+      if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) {
+        setAbducting(true);
+        // Toca o som se não estiver tocando
+        audioRef.current?.play().catch(() => {}); 
+      }
     };
+
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code in keysPressed.current) keysPressed.current[e.code as keyof typeof keysPressed.current] = false;
-      if (e.code === 'Space') setAbducting(false);
+      // Movimento
+      if (e.code in keysPressed.current) {
+        keysPressed.current[e.code as keyof typeof keysPressed.current] = false;
+      }
+
+      // Parar Abdução (Espaço OU Enter)
+      if (e.code === 'Space' || e.code === 'Enter') {
+        setAbducting(false);
+        // Para o som e reseta
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      // Garante que o som pare se o componente desmontar
+      if (audioRef.current) audioRef.current.pause();
     };
   }, [setAbducting]);
 
@@ -107,9 +143,8 @@ export const UFO = () => {
       lockRotations={true}
       linearDamping={2}
       colliders="hull" 
-      // --- CORREÇÕES PARA COLISÃO INSTANTÂNEA ---
-      ccd={true}         // Ativa detecção contínua (evita que o UFO pule o frame da colisão)
-      canSleep={false}   // Impede que o corpo entre em "sleep mode" (sempre ativo)
+      ccd={true}       
+      canSleep={false} 
     >
       <group ref={shipGroupRef}>
         

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { X, Github, Linkedin, Mail, ExternalLink } from 'lucide-react';
@@ -225,6 +226,15 @@ const ContactModal = () => {
    ========================================= */
 export const Modals = () => {
   const { currentSection, currentProject } = useGameStore();
+
+  // --- EFEITO SONORO AO ABRIR MODAL ---
+  useEffect(() => {
+    if (currentSection) {
+      const audio = new Audio('/sounds/plim.wav');
+      audio.volume = 0.5; // Ajuste o volume conforme necessário
+      audio.play().catch((error) => console.error("Erro ao tocar som:", error));
+    }
+  }, [currentSection]);
 
   return (
     <AnimatePresence>
