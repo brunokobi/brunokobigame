@@ -2,8 +2,6 @@ import { create } from 'zustand';
 import * as THREE from 'three'; 
 
 export type Section = 'about' | 'projects' | 'contact' | null;
-
-// CORREÇÃO AQUI: Atualizei os nomes para baterem com o seu Modals.tsx
 export type ProjectId = 'ecommerce' | 'mapas' | 'projetos' | null;
 
 interface Skill {
@@ -22,9 +20,17 @@ interface GameState {
   
   isAbducting: boolean;
   
-  // Game Stats
+  // Game Stats Existing
   score: number;
   skills: Skill[];
+
+  // --- NOVO: ESTADOS DO CRONÔMETRO E VACAS ---
+  startTime: number | null;
+  endTime: number | null;
+  isPlaying: boolean;
+  totalCows: number;
+  cowsAbducted: number;
+  // -------------------------------------------
 
   // Posição do UFO
   ufoPosition: THREE.Vector3; 
@@ -32,12 +38,14 @@ interface GameState {
   // Actions
   openModal: (section: Section) => void;
   closeModal: () => void;
-  openProject: (projectId: ProjectId) => void; // Abre o modal de projetos com o ID específico
-  
-  interactWithHolocube: (content: string) => void; // Abre apenas o toast de texto
+  openProject: (projectId: ProjectId) => void; 
+  interactWithHolocube: (content: string) => void; 
 
   setAbducting: (value: boolean) => void;
   setUfoPosition: (pos: THREE.Vector3) => void;
+  
+  // Actions de Gameplay atualizadas
+  startGame: () => void; // NOVO
   abductCow: () => void; 
   collectSkill: (skillId: string) => void;
   resetGame: () => void;
@@ -62,40 +70,65 @@ export const useGameStore = create<GameState>((set) => ({
   isAbducting: false,
   score: 0,
   skills: initialSkills,
-  
   ufoPosition: new THREE.Vector3(0, 0, 0),
 
+  // --- NOVO: VALORES INICIAIS DO JOGO ---
+  startTime: null,
+  endTime: null,
+  isPlaying: false,
+  totalCows: 5, // Defina aqui quantas vacas existem na cena (TechCows)
+  cowsAbducted: 0,
+  // --------------------------------------
+
   // Actions
-  
-  // Abre modais gerais (Sobre, Contato)
   openModal: (section) => set({ 
     currentSection: section, 
     currentProject: null, 
     holocubeContent: null 
   }),
   
-  // Fecha tudo
   closeModal: () => set({ 
     currentSection: null, 
     currentProject: null, 
     holocubeContent: null 
   }),
   
-  // Abre modal de Projeto Específico (Mapas, Projetos, Ecommerce)
   openProject: (projectId) => set({ 
     currentProject: projectId, 
-    currentSection: 'projects', // Isso força o Modals.tsx a renderizar o <ProjectModal />
+    currentSection: 'projects',
     holocubeContent: null 
   }),
   
-  // Abre apenas mensagem de texto
   interactWithHolocube: (content) => set({ holocubeContent: content }),
 
   setAbducting: (value) => set({ isAbducting: value }),
   
   setUfoPosition: (pos) => set({ ufoPosition: pos }),
 
+  // --- NOVO: INICIAR O JOGO (Chamado no useEffect do App ou Scene) ---
+  startGame: () => set({ 
+    startTime: Date.now(), 
+    endTime: null, 
+    isPlaying: true, 
+    cowsAbducted: 0,
+    score: 0,
+    skills: initialSkills.map(s => ({...s, collected: false}))
+  }),
+
+  // --- ATUALIZADO: LÓGICA DE ABDUÇÃO COM VITORIA ---
   abductCow: () => set((state) => {
+    // 1. Lógica do Cronômetro/Vitória
+    const newAbductedCount = state.cowsAbducted + 1;
+    let isPlaying = state.isPlaying;
+    let endTime = state.endTime;
+
+    // Se pegou a última vaca, para o jogo
+    if (isPlaying && newAbductedCount >= state.totalCows) {
+      isPlaying = false;
+      endTime = Date.now();
+    }
+
+    // 2. Lógica Original das Skills e Score
     const newScore = state.score + 1;
     const nextUncollectedSkill = state.skills.find(s => !s.collected);
     let newSkills = state.skills;
@@ -108,7 +141,10 @@ export const useGameStore = create<GameState>((set) => ({
 
     return { 
       score: newScore, 
-      skills: newSkills 
+      skills: newSkills,
+      cowsAbducted: newAbductedCount,
+      isPlaying: isPlaying,
+      endTime: endTime
     };
   }),
   
@@ -132,5 +168,10 @@ export const useGameStore = create<GameState>((set) => ({
     currentProject: null,
     holocubeContent: null,
     ufoPosition: new THREE.Vector3(0, 0, 0),
+    // Reset timer vars
+    startTime: null,
+    endTime: null,
+    isPlaying: false,
+    cowsAbducted: 0,
   }),
 }));

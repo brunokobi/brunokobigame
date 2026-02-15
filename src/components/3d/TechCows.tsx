@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react'; // Adicione useMemo
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, RapierRigidBody, CuboidCollider } from '@react-three/rapier';
 import { Text } from '@react-three/drei';
@@ -26,19 +26,22 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
   const skill = skills.find(s => s.id === skillId);
   const isAlreadyCollected = skill?.collected || false;
 
-  // Se já foi coletada (global ou local), consideramos "escondida"
   const isHidden = isCollected || isAlreadyCollected;
+
+  // --- CORREÇÃO 1: Criar a instância de áudio apenas UMA vez ---
+  const cowAudio = useMemo(() => {
+    const audio = new Audio('/sounds/cow.mp3');
+    audio.volume = 0.1; // Volume ajustado conforme seu código
+    return audio;
+  }, []);
 
   // --- DETECTOR DE RESET (RESPAWN) ---
   useEffect(() => {
-    // Se o jogo resetou (skill desmarcada) mas a vaca ainda está "coletada/escondida"...
     if (!isAlreadyCollected && isCollected) {
-       // Resetamos os estados locais
        setIsCollected(false);
        setAbductionProgress(0);
        setHasPlayedAbductionSound(false);
 
-       // Teleporta a física de volta para a posição original
        if (rigidBodyRef.current) {
          rigidBodyRef.current.setTranslation({ x: position[0], y: 5, z: position[2] }, true);
          rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -54,26 +57,26 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
     audio.play().catch(() => {});
   };
 
+  // --- CORREÇÃO 2: Só toca se não estiver tocando ---
   const playCowSound = () => {
-    const audio = new Audio('/sounds/cow.wav'); 
-    audio.volume = 0.5; 
-    audio.play().catch(() => {});
+    // A propriedade .paused é true se o áudio parou ou acabou.
+    // Se for false, significa que ainda está tocando, então ignoramos o play.
+    if (cowAudio.paused) {
+        cowAudio.play().catch(() => {});
+    }
   };
 
   useFrame((state, delta) => {
-    // Se estiver escondida ou sem física carregada, não faz nada
     if (isHidden || !rigidBodyRef.current || !ufoPosition) return;
 
     const currentPos = rigidBodyRef.current.translation();
 
-    // Respawn de segurança se cair no infinito
     if (currentPos.y < -10) {
         rigidBodyRef.current.setTranslation({ x: position[0], y: 5, z: position[2] }, true);
         rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
         return;
     }
 
-    // Cálculo da distância para o UFO
     const dist = Math.sqrt(
       Math.pow(currentPos.x - ufoPosition.x, 2) + 
       Math.pow(currentPos.z - ufoPosition.z, 2)
@@ -98,7 +101,6 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
        rigidBodyRef.current.applyImpulse({ x: pullX * delta, y: 0, z: pullZ * delta }, true);
        rigidBodyRef.current.applyTorqueImpulse({ x: 0, y: 0.2, z: 0 }, true);
        
-       // SUCESSO DA COLETA
        if (currentPos.y > 6) {
          playCompleteSound();
 
@@ -106,12 +108,12 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
          else if (abductCow) abductCow();
          
          setIsCollected(true);
-         // Joga pro limbo para parar colisão
          rigidBodyRef.current.setTranslation({ x: 0, y: -500, z: 0 }, true);
        }
 
     } else {
-       // Reseta o som se parar de abduzir totalmente
+       // Reseta o estado para permitir tocar de novo no futuro,
+       // mas a proteção dentro de playCowSound impede que toque IMEDIATAMENTE se ainda estiver rolando.
        if (abductionProgress === 0) {
            setHasPlayedAbductionSound(false);
        }
@@ -119,7 +121,6 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
        if (abductionProgress > 0) {
           setAbductionProgress(prev => Math.max(prev - delta * 2, 0));
        } else {
-          // Animação Idle (Pulo suave)
           const time = state.clock.getElapsedTime();
           if (currentPos.y < 2.0 && currentPos.y > 0 && Math.sin(time * 2 + randomOffset) > 0.98) {
             rigidBodyRef.current.applyImpulse({ x: 0, y: 2, z: 0 }, true);
@@ -128,7 +129,7 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
     }
   });
 
-  // Materiais
+  // Materiais (sem alterações)
   const cowWhite = new THREE.MeshStandardMaterial({ color: "#f0f0f0", roughness: 0.8 });
   const cowBlack = new THREE.MeshStandardMaterial({ color: "#1a1a1a", roughness: 0.9 });
   const cowPink = new THREE.MeshStandardMaterial({ color: "#ffb7b2", roughness: 0.5 });
@@ -139,7 +140,6 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
   return (
     <RigidBody
       ref={rigidBodyRef}
-      // Se escondida, vai pro limbo (-500), senão posição normal
       position={isHidden ? [0, -500, 0] : position}
       mass={1}
       lockRotations={abductionProgress < 0.1}
@@ -158,8 +158,8 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
 
           {/* Corpo */}
           <mesh castShadow receiveShadow position={[0, 0.6, 0]}>
-             <boxGeometry args={[0.7, 0.6, 1.1]} />
-             <meshStandardMaterial color="#f0f0f0" roughness={0.8} emissive="#00ff88" emissiveIntensity={glowIntensity * 0.3}/>
+              <boxGeometry args={[0.7, 0.6, 1.1]} />
+              <meshStandardMaterial color="#f0f0f0" roughness={0.8} emissive="#00ff88" emissiveIntensity={glowIntensity * 0.3}/>
           </mesh>
         
           <mesh position={[0.36, 0.6, 0.2]}><boxGeometry args={[0.05, 0.4, 0.4]} /><primitive object={cowBlack} /></mesh>
@@ -167,10 +167,10 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
         
           {/* Cabeça */}
           <group position={[0, 1.1, 0.7]}>
-             <mesh castShadow><boxGeometry args={[0.4, 0.4, 0.4]} /><primitive object={cowWhite} /></mesh>
-             <mesh position={[0, -0.1, 0.21]}><boxGeometry args={[0.42, 0.15, 0.05]} /><primitive object={cowPink} /></mesh>
-             <mesh position={[0.15, 0.25, 0]} rotation={[0, 0, -0.3]}><coneGeometry args={[0.04, 0.15, 8]} /><primitive object={cowHorn} /></mesh>
-             <mesh position={[-0.15, 0.25, 0]} rotation={[0, 0, 0.3]}><coneGeometry args={[0.04, 0.15, 8]} /><primitive object={cowHorn} /></mesh>
+              <mesh castShadow><boxGeometry args={[0.4, 0.4, 0.4]} /><primitive object={cowWhite} /></mesh>
+              <mesh position={[0, -0.1, 0.21]}><boxGeometry args={[0.42, 0.15, 0.05]} /><primitive object={cowPink} /></mesh>
+              <mesh position={[0.15, 0.25, 0]} rotation={[0, 0, -0.3]}><coneGeometry args={[0.04, 0.15, 8]} /><primitive object={cowHorn} /></mesh>
+              <mesh position={[-0.15, 0.25, 0]} rotation={[0, 0, 0.3]}><coneGeometry args={[0.04, 0.15, 8]} /><primitive object={cowHorn} /></mesh>
           </group>
         
           {/* Pernas */}
@@ -202,7 +202,6 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
 };
 
 // --- Componente Principal (Lista de Vacas) ---
-// É ESTE componente que o Scene.tsx está procurando!
 export const TechCows = () => {
   const cowData = [
     { id: 'react', name: 'React', position: [-5, 5, 5] as [number, number, number] },

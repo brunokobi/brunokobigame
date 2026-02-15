@@ -4,22 +4,37 @@ import { Tutorial } from '@/components/ui/Tutorial';
 import { Modals } from '@/components/ui/Modals';
 import { SkillToast } from '@/components/ui/SkillToast';
 import { MobileControls } from '@/components/ui/MobileControls';
+// --- 1. NOVOS IMPORTS ---
+
+import { useGameStore } from '@/store/gameStore';
+// -----------------------
+
 import { motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX } from 'lucide-react'; // Ícones de som
+import { Volume2, VolumeX } from 'lucide-react'; 
 
 const Index = () => {
   // --- Configuração do Áudio ---
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  // --- 2. LÓGICA DE INÍCIO DO JOGO ---
   useEffect(() => {
-    // 1. Cria o objeto de áudio
-    audioRef.current = new Audio('/sounds/fundo.mp3');
-    audioRef.current.loop = true; // Repetir música
-    audioRef.current.volume = 0.3; // Volume baixo (30%)
+    // Inicia o cronômetro e reseta pontuação
+    useGameStore.getState().startGame();
 
-    // 2. Tenta tocar (Autoplay policy pode bloquear)
+    // Limpeza: Reseta quando sair da página
+    return () => {
+      useGameStore.getState().resetGame();
+    };
+  }, []);
+  // -----------------------------------
+
+  useEffect(() => {
+    audioRef.current = new Audio('/sounds/fundo.mp3');
+    audioRef.current.loop = true; 
+    audioRef.current.volume = 0.3; 
+
     const tryPlay = async () => {
       try {
         if (audioRef.current) {
@@ -57,8 +72,12 @@ const Index = () => {
       {/* 3D Scene */}
       <Scene />
 
-      {/* UI Overlay */}
+      
+      
+      {/* Outras UIs */}
       <HUD />
+
+      
       <Tutorial />
       <Modals />
       <SkillToast />

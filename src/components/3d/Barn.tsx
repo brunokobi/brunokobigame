@@ -19,6 +19,11 @@ export const Barn = () => {
     emissiveIntensity: 3 
   });
 
+  // Função unificada para abrir o modal
+  const handleInteract = () => {
+    openModal('about');
+  };
+
   const handleEnter = () => {
     if (!entered.current) {
       entered.current = true;
@@ -32,7 +37,19 @@ export const Barn = () => {
 
   return (
     <group position={[-15, 0, -10]}>
-      <RigidBody type="fixed" colliders="cuboid">
+      {/* ADICIONADO INTERAÇÃO NO CELEIRO 
+          (onClick no RigidBody funciona porque ele agrupa as meshes)
+      */}
+      <RigidBody 
+        type="fixed" 
+        colliders="cuboid"
+        onClick={(e) => {
+            e.stopPropagation();
+            handleInteract();
+        }}
+        onPointerEnter={() => document.body.style.cursor = 'pointer'}
+        onPointerLeave={() => document.body.style.cursor = 'auto'}
+      >
         
         {/* === ESTRUTURA PRINCIPAL === */}
         
@@ -150,7 +167,7 @@ export const Barn = () => {
         />
       </RigidBody>
 
-      {/* Sensor */}
+      {/* Sensor de Proximidade (Mantido) */}
       <RigidBody type="fixed" sensor canSleep={false}>
         <CuboidCollider 
           args={[3, 3, 3]} 
@@ -160,16 +177,23 @@ export const Barn = () => {
         />
       </RigidBody>
 
-      {/* Placa Flutuante (Corrigida: sem a prop 'font') */}
+      {/* ADICIONADO INTERAÇÃO NA PLACA DE TEXTO 
+      */}
       <Text
         position={[0, 9.2, 0]} 
         fontSize={1}
         color="#00ff88"
-        // font="/fonts/Inter-Bold.woff"  <-- REMOVIDO PARA EVITAR ERRO
         anchorX="center"
         anchorY="middle"
         outlineWidth={0.05}
         outlineColor="#000000"
+        // Eventos de clique e cursor
+        onClick={(e) => {
+            e.stopPropagation();
+            handleInteract();
+        }}
+        onPointerEnter={() => document.body.style.cursor = 'pointer'}
+        onPointerLeave={() => document.body.style.cursor = 'auto'}
       >
         SOBRE MIM
       </Text>

@@ -10,7 +10,7 @@ import * as THREE from 'three';
    ITEM 1: PROJETOS (Pasta)
    ========================================= */
 const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
-  const { openProject } = useGameStore(); // Usamos a função padrão da store
+  const { openProject } = useGameStore(); 
   const [isHovering, setIsHovering] = useState(false);
   const folderGroupRef = useRef<THREE.Group>(null);
   const glowColor = '#ff4444';
@@ -30,7 +30,18 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
       </mesh>
 
       <Float speed={2} rotationIntensity={0.2} floatIntensity={1}>
-        <group ref={folderGroupRef} position={[0, 4, 0]} scale={1.5}> 
+        {/* --- ADICIONADO AQUI: Eventos de Click no Grupo Visual --- */}
+        <group 
+            ref={folderGroupRef} 
+            position={[0, 4, 0]} 
+            scale={1.5}
+            onClick={(e) => {
+                e.stopPropagation(); // Impede clicar através do objeto
+                openProject('projetos' as ProjectId);
+            }}
+            onPointerEnter={() => document.body.style.cursor = 'pointer'} // Muda cursor para mãozinha
+            onPointerLeave={() => document.body.style.cursor = 'auto'}   // Volta cursor ao normal
+        > 
           {/* Pasta Visual */}
           <mesh position={[0, -0.1, 0]}>
             <boxGeometry args={[1.8, 0.15, 1.4]} />
@@ -53,15 +64,14 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
         PROJETOS
       </Text>
 
-      {/* --- FÍSICA E COLISÃO --- */}
+      {/* --- FÍSICA E COLISÃO (Mantido igual) --- */}
       <RigidBody type="fixed" colliders={false} canSleep={false}>
         <CuboidCollider 
-            args={[3, 5, 3]} // Aumentei um pouco a hitbox para facilitar
+            args={[3, 5, 3]} 
             position={[0, 3, 0]} 
             onCollisionEnter={({ other }) => {
                 if (other.rigidBodyObject?.name === "player") {
                     setIsHovering(true);
-                    // Abre o modal carregando o conteúdo de 'projetos'
                     openProject('projetos' as ProjectId);
                 }
             }}
@@ -78,7 +88,6 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
    ITEM 2: MAPA (Globo / MAPAS)
    ========================================= */
 const MapCube = ({ position }: { position: [number, number, number] }) => {
-  // CORREÇÃO: Usamos 'openProject' aqui também, passando o ID 'mapas'
   const { openProject } = useGameStore(); 
   
   const [isHovering, setIsHovering] = useState(false);
@@ -99,7 +108,18 @@ const MapCube = ({ position }: { position: [number, number, number] }) => {
       </mesh>
 
       <Float speed={2} rotationIntensity={0.2} floatIntensity={1}>
-        <group ref={globeRef} position={[0, 4, 0]} scale={1.3}>
+        {/* --- ADICIONADO AQUI: Eventos de Click no Grupo Visual --- */}
+        <group 
+            ref={globeRef} 
+            position={[0, 4, 0]} 
+            scale={1.3}
+            onClick={(e) => {
+                e.stopPropagation();
+                openProject('mapas' as ProjectId);
+            }}
+            onPointerEnter={() => document.body.style.cursor = 'pointer'}
+            onPointerLeave={() => document.body.style.cursor = 'auto'}
+        >
           {/* Globo Visual */}
           <mesh>
             <sphereGeometry args={[1, 32, 32]} />
@@ -117,15 +137,14 @@ const MapCube = ({ position }: { position: [number, number, number] }) => {
         MAPAS
       </Text>
 
-      {/* --- FÍSICA E COLISÃO --- */}
+      {/* --- FÍSICA E COLISÃO (Mantido igual) --- */}
       <RigidBody type="fixed" colliders={false}>
         <CuboidCollider 
-            args={[3, 5, 3]} // Hitbox generosa
+            args={[3, 5, 3]} 
             position={[0, 3, 0]} 
             onCollisionEnter={({ other }) => {
                 if (other.rigidBodyObject?.name === "player") {
                     setIsHovering(true);
-                    // AQUI: Abre o modal carregando o conteúdo de 'mapas'
                     openProject('mapas' as ProjectId);
                 }
             }}
