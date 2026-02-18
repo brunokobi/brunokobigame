@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
-import { X, Github, Linkedin, Mail, ExternalLink, Search, Trash2, MapPin, Globe } from 'lucide-react';
+import { X, Github, Linkedin, Mail, ExternalLink, Search, Trash2, MapPin, Globe, Radio } from 'lucide-react';
+import { createClient } from "@supabase/supabase-js";
+
+// Se você não tiver react-icons instalado, pode usar ícones do lucide ou instalar: yarn add react-icons
+// Aqui estou usando Lucide para manter consistência com seu arquivo, mas simulei o estilo alien
+// Se quiser usar react-icons, descomente as linhas abaixo e instale a lib
+// import { FaSatelliteDish } from "react-icons/fa"; 
+// import { RiAliensFill } from "react-icons/ri"; 
+
+/* =========================================
+   CONFIGURAÇÃO SUPABASE
+   ========================================= */
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 /* =========================================
    DADOS DOS MARCOS (LANDMARKS)
@@ -197,9 +211,6 @@ const MapInterface = ({ closeModal }: { closeModal: () => void }) => {
     falar(item.desc);
   };
 
-  // --- LÓGICA DO IFRAME CORRIGIDA ---
-  // Se TEM coordenadas: Mostra o local com zoom 19 (satélite próximo)
-  // Se NÃO TEM coordenadas: Mostra o mapa mundi (zoom 2, satélite) ao invés de erro 404
   const mapUrl = mapState.lat && mapState.lng
     ? `https://maps.google.com/maps?q=${mapState.lat},${mapState.lng}&t=k&z=19&ie=UTF8&iwloc=&output=embed`
     : `https://maps.google.com/maps?q=0,0&t=k&z=2&ie=UTF8&iwloc=&output=embed`; 
@@ -296,7 +307,7 @@ const MapInterface = ({ closeModal }: { closeModal: () => void }) => {
           </div>
         </div>
 
-        {/* Lado Direito: Mapa (SUBSTITUÍDO POR IFRAME) */}
+        {/* Lado Direito: Mapa */}
         <div className="w-full md:w-2/3 h-full relative z-0 bg-slate-800 flex flex-col">
             <iframe
                 width="100%"
@@ -324,7 +335,7 @@ const MapInterface = ({ closeModal }: { closeModal: () => void }) => {
 };
 
 /* =========================================
-   MODAIS PADRÃO (Mantidos iguais)
+   MODAIS PADRÃO
    ========================================= */
 
 const AboutModal = () => {
@@ -419,18 +430,18 @@ const ProjectListModal = () => {
             <div className="flex gap-2 mt-auto">
                {project.id !== 'mapas' ? (
                  <>
-                    {project.demo && (
-                      <a href={project.demo} target="_blank" rel="noreferrer"
-                        className="flex-1 text-center py-2 text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors flex items-center justify-center gap-1">
-                        <ExternalLink size={12} /> Demo
-                      </a>
-                    )}
-                    {project.code && (
-                      <a href={project.code} target="_blank" rel="noreferrer"
-                        className="flex-1 text-center py-2 text-xs font-bold border border-slate-600 hover:bg-slate-700 text-slate-300 rounded transition-colors flex items-center justify-center gap-1">
-                        <Github size={12} /> Code
-                      </a>
-                    )}
+                   {project.demo && (
+                     <a href={project.demo} target="_blank" rel="noreferrer"
+                       className="flex-1 text-center py-2 text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors flex items-center justify-center gap-1">
+                       <ExternalLink size={12} /> Demo
+                     </a>
+                   )}
+                   {project.code && (
+                     <a href={project.code} target="_blank" rel="noreferrer"
+                       className="flex-1 text-center py-2 text-xs font-bold border border-slate-600 hover:bg-slate-700 text-slate-300 rounded transition-colors flex items-center justify-center gap-1">
+                       <Github size={12} /> Code
+                     </a>
+                   )}
                  </>
                ) : (
                  <button
@@ -448,29 +459,167 @@ const ProjectListModal = () => {
   );
 };
 
+/* =========================================
+   CONTACT MODAL - UPLINK ALIEN (SUPABASE)
+   ========================================= */
 const ContactModal = () => {
   const { closeModal } = useGameStore();
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [formData, setFormData] = useState({ nome: "", email: "", mensagem: "" });
+  
+  const arcadeGreen = "#39ff14";
+
+  // CSS Styles for the Alien Animations (Scanline, etc)
+  const styles = `
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100%); }
+    }
+    @keyframes signalWave {
+      0% { transform: scale(1); opacity: 0.8; border-color: ${arcadeGreen}; }
+      100% { transform: scale(2); opacity: 0; border-color: transparent; }
+    }
+    @keyframes blink {
+      0% { opacity: 1; box-shadow: 0 0 10px ${arcadeGreen}; }
+      50% { opacity: 0.3; box-shadow: 0 0 0px ${arcadeGreen}; }
+      100% { opacity: 1; box-shadow: 0 0 10px ${arcadeGreen}; }
+    }
+    .animate-scanline { animation: scanline 4s linear infinite; }
+    .animate-signal { animation: signalWave 2s infinite; }
+    .animate-signal-delay { animation: signalWave 2s infinite 0.5s; }
+    .animate-blink { animation: blink 1s infinite; }
+  `;
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const { error } = await supabase
+      .from('contato')
+      .insert([{ 
+          nome: formData.nome, 
+          email: formData.email, 
+          mensagem: formData.mensagem 
+      }]);
+
+    setLoading(false);
+
+    if (!error) {
+      setSent(true);
+      setTimeout(() => {
+        closeModal();
+      }, 2500);
+    } else {
+        alert("Erro na transmissão. Tente novamente.");
+    }
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      className="glass-card p-8 max-w-lg w-full mx-4 relative bg-slate-900/95 border border-yellow-500/30 rounded-xl shadow-2xl"
-    >
-      <button onClick={closeModal} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
-      <div className="text-center mb-6">
-        <div className="text-5xl mb-4 animate-pulse">📡</div>
-        <h2 className="text-2xl font-bold text-yellow-400 font-space">Contato</h2>
-      </div>
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-        <input type="text" className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white" placeholder="Nome" />
-        <input type="email" className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white" placeholder="Email" />
-        <textarea rows={3} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none" placeholder="Mensagem..."></textarea>
-        <button className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold rounded-lg flex items-center justify-center gap-2">
-          <Mail size={18} /> Enviar
+    <>
+      <style>{styles}</style>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="relative overflow-hidden p-8 max-w-lg w-full mx-4 bg-[#0a0f0a]/95 border-2 border-[#39ff14] rounded-2xl shadow-[0_0_30px_rgba(57,255,20,0.3)] font-mono"
+      >
+        {/* Efeito Scanline */}
+        <div 
+            className="absolute top-0 left-0 w-full h-[10px] opacity-50 pointer-events-none z-10 animate-scanline"
+            style={{ background: `linear-gradient(to bottom, transparent, ${arcadeGreen}20, transparent)` }}
+        />
+
+        <button onClick={closeModal} className="absolute top-4 right-4 text-[#39ff14] hover:text-white z-50">
+          <X size={24} />
         </button>
-      </form>
-    </motion.div>
+
+        {sent ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            {/* Ícone Alienígena (Simulado) */}
+            <div className="w-16 h-16 mb-4 text-[#39ff14] animate-blink flex items-center justify-center border-2 border-[#39ff14] rounded-full">
+                👽
+            </div>
+            <h2 className="text-[#39ff14] text-xl font-bold tracking-widest font-[Orbitron]">TRANSMISSÃO CONCLUÍDA</h2>
+            <p className="text-[#39ff14] mt-2 text-xs opacity-70">SINAL RECEBIDO NA NAVE MÃE</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col items-center mb-6 relative z-20">
+              <div className="relative mb-4">
+                <div className="absolute top-0 left-0 right-0 bottom-0 rounded-full border-2 border-[#39ff14] animate-signal" />
+                <div className="absolute -top-2 -left-2 -right-2 -bottom-2 rounded-full border border-[#39ff14] animate-signal-delay" />
+                <div className="bg-black rounded-full p-3 border-2 border-[#39ff14] z-10 relative">
+                  <Radio size={32} color={arcadeGreen} />
+                </div>
+              </div>
+              <h2 className="text-[#39ff14] text-xl font-bold tracking-[4px] drop-shadow-[0_0_10px_#39ff14]">
+                UPLINK E.T.
+              </h2>
+              <div className="flex items-center mt-2 gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#39ff14] animate-blink" />
+                <span className="text-[10px] text-[#39ff14] tracking-widest">STATION ONLINE // READY</span>
+              </div>
+            </div>
+
+            <form className="space-y-4 relative z-20" onSubmit={handleSubmit}>
+              <div className="space-y-1">
+                <label className="text-[#39ff14] text-[10px] font-bold ml-1">IDENT: COMANDANTE</label>
+                <input 
+                  name="nome"
+                  required
+                  value={formData.nome}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-black border border-[#39ff14]/40 rounded-lg text-[#39ff14] focus:border-[#39ff14] outline-none transition-all placeholder-[#39ff14]/20 shadow-[inset_0_0_10px_rgba(57,255,20,0.1)] focus:shadow-[0_0_10px_rgba(57,255,20,0.3)]" 
+                  placeholder="NOME..." 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[#39ff14] text-[10px] font-bold ml-1">FREQUÊNCIA (EMAIL)</label>
+                <input 
+                  type="email" 
+                  name="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-black border border-[#39ff14]/40 rounded-lg text-[#39ff14] focus:border-[#39ff14] outline-none transition-all placeholder-[#39ff14]/20 shadow-[inset_0_0_10px_rgba(57,255,20,0.1)] focus:shadow-[0_0_10px_rgba(57,255,20,0.3)]" 
+                  placeholder="EMAIL@GALAXY.COM" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[#39ff14] text-[10px] font-bold ml-1">PACOTE DE DADOS</label>
+                <textarea 
+                  name="mensagem"
+                  required
+                  rows={3} 
+                  value={formData.mensagem}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-black border border-[#39ff14]/40 rounded-lg text-[#39ff14] focus:border-[#39ff14] outline-none transition-all placeholder-[#39ff14]/20 resize-none shadow-[inset_0_0_10px_rgba(57,255,20,0.1)] focus:shadow-[0_0_10px_rgba(57,255,20,0.3)]" 
+                  placeholder="DIGITE A MENSAGEM..." 
+                />
+              </div>
+              
+              <button 
+                disabled={loading}
+                className="group w-full py-4 bg-transparent border-2 border-[#39ff14] text-[#39ff14] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#39ff14] hover:text-black transition-all hover:shadow-[0_0_20px_#39ff14] uppercase tracking-wider"
+              >
+                {loading ? (
+                  "TRANSMITINDO..."
+                ) : (
+                  <>
+                    <Mail size={20} className="group-hover:animate-bounce" /> DISPARAR SINAL
+                  </>
+                )}
+              </button>
+            </form>
+          </>
+        )}
+      </motion.div>
+    </>
   );
 };
 

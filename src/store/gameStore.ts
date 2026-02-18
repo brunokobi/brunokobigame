@@ -11,47 +11,34 @@ interface Skill {
 }
 
 interface GameState {
-  // UI State
   currentSection: Section;
   currentProject: ProjectId;
-  
-  // Estado para o Pop-up de texto simples (Toast)
   holocubeContent: string | null; 
-  
   isAbducting: boolean;
-  
-  // Game Stats Existing
   score: number;
   skills: Skill[];
 
-  // --- NOVO: ESTADOS DO CRONÔMETRO E VACAS ---
+  // Estados do Cronômetro
   startTime: number | null;
   endTime: number | null;
   isPlaying: boolean;
-  totalCows: number;
-  cowsAbducted: number;
-  // -------------------------------------------
-
-  // Posição do UFO
+  
   ufoPosition: THREE.Vector3; 
   
-  // Actions
   openModal: (section: Section) => void;
   closeModal: () => void;
   openProject: (projectId: ProjectId) => void; 
   interactWithHolocube: (content: string) => void; 
-
   setAbducting: (value: boolean) => void;
   setUfoPosition: (pos: THREE.Vector3) => void;
   
-  // Actions de Gameplay atualizadas
-  startGame: () => void; // NOVO
+  startGame: () => void;
   abductCow: () => void; 
   collectSkill: (skillId: string) => void;
   resetGame: () => void;
 }
 
-const initialSkills: Skill[] = [
+const INITIAL_SKILLS_DATA: Skill[] = [
   { id: 'react', name: 'React', collected: false },
   { id: 'typescript', name: 'TypeScript', collected: false },
   { id: 'nodejs', name: 'Node.js', collected: false },
@@ -63,115 +50,81 @@ const initialSkills: Skill[] = [
 ];
 
 export const useGameStore = create<GameState>((set) => ({
-  // Initial State
   currentSection: null,
   currentProject: null,
   holocubeContent: null,
   isAbducting: false,
   score: 0,
-  skills: initialSkills,
+  skills: INITIAL_SKILLS_DATA.map(s => ({ ...s })), 
   ufoPosition: new THREE.Vector3(0, 0, 0),
 
-  // --- NOVO: VALORES INICIAIS DO JOGO ---
   startTime: null,
   endTime: null,
   isPlaying: false,
-  totalCows: 5, // Defina aqui quantas vacas existem na cena (TechCows)
-  cowsAbducted: 0,
-  // --------------------------------------
 
-  // Actions
-  openModal: (section) => set({ 
-    currentSection: section, 
-    currentProject: null, 
-    holocubeContent: null 
-  }),
-  
-  closeModal: () => set({ 
-    currentSection: null, 
-    currentProject: null, 
-    holocubeContent: null 
-  }),
-  
-  openProject: (projectId) => set({ 
-    currentProject: projectId, 
-    currentSection: 'projects',
-    holocubeContent: null 
-  }),
-  
+  openModal: (section) => set({ currentSection: section, currentProject: null, holocubeContent: null }),
+  closeModal: () => set({ currentSection: null, currentProject: null, holocubeContent: null }),
+  openProject: (projectId) => set({ currentProject: projectId, currentSection: 'projects', holocubeContent: null }),
   interactWithHolocube: (content) => set({ holocubeContent: content }),
-
   setAbducting: (value) => set({ isAbducting: value }),
-  
   setUfoPosition: (pos) => set({ ufoPosition: pos }),
 
-  // --- NOVO: INICIAR O JOGO (Chamado no useEffect do App ou Scene) ---
   startGame: () => set({ 
     startTime: Date.now(), 
     endTime: null, 
     isPlaying: true, 
-    cowsAbducted: 0,
     score: 0,
-    skills: initialSkills.map(s => ({...s, collected: false}))
+    skills: INITIAL_SKILLS_DATA.map(s => ({ ...s, collected: false })) 
   }),
 
-  // --- ATUALIZADO: LÓGICA DE ABDUÇÃO COM VITORIA ---
   abductCow: () => set((state) => {
-    // 1. Lógica do Cronômetro/Vitória
-    const newAbductedCount = state.cowsAbducted + 1;
-    let isPlaying = state.isPlaying;
-    let endTime = state.endTime;
+    if (!state.isPlaying) return {};
 
-    // Se pegou a última vaca, para o jogo
-    if (isPlaying && newAbductedCount >= state.totalCows) {
-      isPlaying = false;
-      endTime = Date.now();
-    }
+    // 1. Marca a próxima skill como coletada
+    const nextUncollectedIndex = state.skills.findIndex(s => !s.collected);
+    if (nextUncollectedIndex === -1) return {};
 
-    // 2. Lógica Original das Skills e Score
-    const newScore = state.score + 1;
-    const nextUncollectedSkill = state.skills.find(s => !s.collected);
-    let newSkills = state.skills;
+    const newSkills = [...state.skills];
+    newSkills[nextUncollectedIndex] = { ...newSkills[nextUncollectedIndex], collected: true };
 
-    if (nextUncollectedSkill) {
-      newSkills = state.skills.map(s => 
-        s.id === nextUncollectedSkill.id ? { ...s, collected: true } : s
-      );
-    }
+    // 2. Calcula Placar
+    const newScore = newSkills.filter(s => s.collected).length;
+    const totalSkills = newSkills.length; // 8
+
+    // 3. Verifica Vitória
+    const isVictory = newScore >= totalSkills;
+    
+    // Se ganhou, para o tempo AGORA
+    const newEndTime = isVictory ? Date.now() : state.endTime;
+    const newIsPlaying = isVictory ? false : state.isPlaying;
 
     return { 
-      score: newScore, 
       skills: newSkills,
-      cowsAbducted: newAbductedCount,
-      isPlaying: isPlaying,
-      endTime: endTime
+      score: newScore,
+      isPlaying: newIsPlaying,
+      endTime: newEndTime
     };
   }),
   
   collectSkill: (skillId) => set((state) => {
-    const skill = state.skills.find(s => s.id === skillId);
-    if (skill && !skill.collected) {
-      return {
-        score: state.score + 1,
-        skills: state.skills.map(s => 
-          s.id === skillId ? { ...s, collected: true } : s
-        ),
-      };
-    }
-    return state;
+     const skillIndex = state.skills.findIndex(s => s.id === skillId);
+     if (skillIndex !== -1 && !state.skills[skillIndex].collected) {
+        const newSkills = [...state.skills];
+        newSkills[skillIndex] = { ...newSkills[skillIndex], collected: true };
+        return { score: state.score + 1, skills: newSkills };
+     }
+     return {};
   }),
   
   resetGame: () => set({
     score: 0,
-    skills: initialSkills,
+    skills: INITIAL_SKILLS_DATA.map(s => ({ ...s, collected: false })),
     currentSection: null,
     currentProject: null,
     holocubeContent: null,
     ufoPosition: new THREE.Vector3(0, 0, 0),
-    // Reset timer vars
     startTime: null,
     endTime: null,
     isPlaying: false,
-    cowsAbducted: 0,
   }),
 }));
