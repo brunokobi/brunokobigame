@@ -6,12 +6,16 @@ import * as THREE from 'three';
 
 // Importação dos seus componentes externos
 import { UFO } from './UFO';
-import { Ground } from './Ground'; // Certifique-se que o Ground tem RigidBody!
+import { Ground } from './Ground'; 
 import { Barn } from './Barn';
 import { HoloCubes } from './HoloCubes';
 import { TechCows } from './TechCows';
 import { Antenna } from './Antenna';
 import { Moon } from './Moon';
+
+// --- 1. IMPORTAÇÃO DO PLACAR AQUI ---
+import { Scoreboard3D } from './Scoreboard3D'; 
+// ------------------------------------
 
 /* =========================================
    COMPONENTE: ESTRADA COM MEIO-FIO (CURBS)
@@ -240,9 +244,6 @@ const RockyHorizon = () => {
 };
 
 /* =========================================
-   CONTEÚDO DA CENA PRINCIPAL
-   ========================================= */
-/* =========================================
    CONTEÚDO DA CENA PRINCIPAL (ILUMINAÇÃO AJUSTADA)
    ========================================= */
 const SceneContent = () => {
@@ -252,11 +253,7 @@ const SceneContent = () => {
       <OrbitControls enablePan={false} minDistance={15} maxDistance={80} maxPolarAngle={Math.PI / 2.05} target={[0, 0, 0]} />
 
       {/* --- ILUMINAÇÃO REFORÇADA --- */}
-      
-      {/* 1. Luz Ambiente mais forte (Base clara) */}
       <ambientLight intensity={0.6} color="#666677" />
-
-      {/* 2. Luz Direcional (Lua) mais intensa e abrangente */}
       <directionalLight 
         position={[-50, 60, -50]} 
         intensity={4.0} 
@@ -264,23 +261,23 @@ const SceneContent = () => {
         castShadow 
         shadow-bias={-0.0001} 
       />
-
-      {/* 3. Luz de Preenchimento (Fill Light) para o lado oposto da lua */}
       <pointLight position={[50, 30, 50]} intensity={1.5} color="#aa88cc" distance={100} decay={2} />
-
-      {/* 4. Hemisfério para simular luz do céu vs chão */}
       <hemisphereLight skyColor="#223344" groundColor="#050510" intensity={1} />
 
       {/* --- AMBIENTE E FUNDO --- */}
       <Environment preset="night" blur={0.6} background={false} />
-      
-      {/* Neblina mais suave e azulada para clarear o fundo */}
       <fogExp2 attach="fog" args={['#101025', 0.008]} /> 
-      
       <Stars radius={120} depth={50} count={7000} factor={4} saturation={0} fade speed={1} />
 
       <Moon />
       <RockyHorizon />
+
+      {/* --- 2. ADICIONANDO O PLACAR NO MUNDO 3D --- */}
+    <Scoreboard3D 
+  position={[38, 8.5, 25]} // Y=8.5 levanta o placar para as pernas encostarem na grama
+  rotation={[0, -0.5, 0]} 
+/>
+      {/* --------------------------------------------- */}
 
       {/* MUNDO FÍSICO (Mantido igual) */}
       <Physics gravity={[0, -9.81, 0]}>
@@ -333,9 +330,9 @@ export const Scene = () => {
         gl={{ 
           antialias: true,
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.8 // Aumentado de 1.2 para 1.8 (Mais brilho geral)
+          toneMappingExposure: 1.8 
         }}
-        style={{ background: '#101025' }} // Fundo um pouco mais claro que o preto total
+        style={{ background: '#101025' }} 
       >
         <Suspense fallback={null}>
           <SceneContent />

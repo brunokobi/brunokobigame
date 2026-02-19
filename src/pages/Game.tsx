@@ -5,18 +5,21 @@ import { Modals } from '@/components/ui/Modals';
 import { SkillToast } from '@/components/ui/SkillToast';
 import { MobileControls } from '@/components/ui/MobileControls';
 // --- 1. NOVOS IMPORTS ---
-
 import { useGameStore } from '@/store/gameStore';
 // -----------------------
 
-import { motion } from 'framer-motion';
+// --- IMPORTANTE: Adicionado AnimatePresence e o ícone Music ---
+import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX } from 'lucide-react'; 
+import { Volume2, VolumeX, Music } from 'lucide-react'; 
 
 const Index = () => {
   // --- Configuração do Áudio ---
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  
+  // --- NOVO: Estado para controlar o popup de música ---
+  const [showMusicToast, setShowMusicToast] = useState(false);
 
   // --- 2. LÓGICA DE INÍCIO DO JOGO ---
   useEffect(() => {
@@ -30,6 +33,7 @@ const Index = () => {
   }, []);
   // -----------------------------------
 
+  // --- LÓGICA DO ÁUDIO ---
   useEffect(() => {
     audioRef.current = new Audio('/sounds/fundo.mp3');
     audioRef.current.loop = true; 
@@ -40,6 +44,7 @@ const Index = () => {
         if (audioRef.current) {
           await audioRef.current.play();
           setIsPlaying(true);
+          setShowMusicToast(true); // Exibe o popup quando toca com sucesso
         }
       } catch (err) {
         console.log("Autoplay bloqueado, aguardando clique do usuário.");
@@ -56,6 +61,18 @@ const Index = () => {
     };
   }, []);
 
+  // --- NOVO: Efeito para esconder o popup após 3 segundos ---
+  useEffect(() => {
+    if (showMusicToast) {
+      const timer = setTimeout(() => {
+        setShowMusicToast(false);
+      }, 3000); // 3000ms = 3 segundos
+      
+      // Limpa o timer se o componente desmontar ou se o toast mudar de estado
+      return () => clearTimeout(timer); 
+    }
+  }, [showMusicToast]);
+
   const toggleAudio = () => {
     if (!audioRef.current) return;
     
@@ -63,6 +80,7 @@ const Index = () => {
       audioRef.current.pause();
     } else {
       audioRef.current.play();
+      setShowMusicToast(true); // Exibe o popup quando o usuário clica no botão Play
     }
     setIsPlaying(!isPlaying);
   };
@@ -72,16 +90,42 @@ const Index = () => {
       {/* 3D Scene */}
       <Scene />
 
-      
-      
       {/* Outras UIs */}
       <HUD />
-
-      
       <Tutorial />
       <Modals />
       <SkillToast />
       <MobileControls />
+
+      {/* --- POPUP DE MÚSICA (Canto Superior Direito) --- */}
+      <AnimatePresence>
+        {showMusicToast && (
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 50, transition: { duration: 0.5 } }}
+            className="fixed top-24 right-6 z-50 bg-black/60 backdrop-blur-md border border-cyan-500/30 p-4 rounded-xl shadow-lg shadow-cyan-500/10 flex items-center gap-4 max-w-xs pointer-events-none"
+          >
+            {/* Ícone Animado */}
+            <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex shrink-0 items-center justify-center border border-cyan-500/50">
+              <Music size={18} className="text-cyan-400 animate-pulse" />
+            </div>
+            
+            {/* Informações da Música */}
+            <div className="flex flex-col">
+              <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-[0.2em] mb-1">
+                Tocando Agora
+              </span>
+              <span className="text-sm text-white font-bold leading-tight line-clamp-2">
+                Williams: E.T., Flying Theme 1982
+              </span>
+              <span className="text-xs text-slate-400 mt-1 truncate">
+                John Williams & The Boston Pops
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* --- Botão de Música --- */}
       <button 
