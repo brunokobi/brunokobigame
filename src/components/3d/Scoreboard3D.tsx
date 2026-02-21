@@ -111,7 +111,7 @@ export const Scoreboard3D = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any
         occlude
         distanceFactor={4.8} 
         position={[0, 0, 0.32]}
-        className="w-[1000px] h-[800px] overflow-hidden bg-[#050505] border-4 border-[#00ffcc]/40 p-6 flex flex-col rounded-xl shadow-[0_0_40px_rgba(0,255,204,0.3)] select-none"
+        className="w-[1000px] h-[800px] overflow-hidden bg-[#050505] border-4 border-[#00ffcc]/40 p-8 flex flex-col rounded-xl shadow-[0_0_40px_rgba(0,255,204,0.3)] select-none"
       >
         <div 
           className="w-full h-full text-[#00ffcc] font-mono flex flex-col select-none" 
@@ -122,40 +122,40 @@ export const Scoreboard3D = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any
           }}
         >
           
-          <div className="text-center mb-4 shrink-0">
-            <h1 className="text-6xl font-black tracking-[0.3em] text-white" style={{ textShadow: '0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(0, 255, 204, 0.8)' }}>
+          <div className="text-center mb-6 shrink-0">
+            <h1 className="text-7xl font-black tracking-[0.3em] text-white" style={{ textShadow: '0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(0, 255, 204, 0.8)' }}>
               TOP 10
             </h1>
-            <p className="text-sm tracking-widest text-[#00ffcc]/70 mt-2 uppercase font-sans">Fullstack Invasion - Leaderboard</p>
+            <p className="text-2xl tracking-widest text-[#00ffcc]/70 mt-3 uppercase font-sans font-bold">Fullstack Invasion - Leaderboard</p>
           </div>
 
-          <div className="grid grid-cols-[1fr_auto_80px] gap-4 border-b-2 border-[#00ffcc]/30 pb-2 mb-3 text-2xl font-bold uppercase tracking-widest text-white/80 shrink-0">
-            <div className="text-left pl-4">Piloto</div>
+          {/* Cabeçalho da Tabela - Fonte aumentada de text-2xl para text-3xl */}
+          <div className="grid grid-cols-[1fr_auto_100px] gap-4 border-b-2 border-[#00ffcc]/30 pb-3 mb-4 text-3xl font-bold uppercase tracking-widest text-white/80 shrink-0">
+            <div className="text-left pl-6">Piloto</div>
             <div className="text-center">Tempo</div>
-            <div className="text-right pr-4">País</div>
+            <div className="text-right pr-6">País</div>
           </div>
 
-          {/* Alterado de justify-between para gap-2 para colar mais as linhas */}
-          <div className="flex flex-col flex-1 gap-2 pb-2">
+          <div className="flex flex-col flex-1 gap-3 pb-2 overflow-y-auto">
             {loading ? (
-              <div className="flex-1 flex items-center justify-center animate-pulse text-[#00ffcc]/50 text-3xl tracking-widest">
+              <div className="flex-1 flex items-center justify-center animate-pulse text-[#00ffcc]/50 text-4xl tracking-widest">
                 SINCRONIZANDO DADOS...
               </div>
             ) : topScores.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center text-[#00ffcc]/50 text-3xl tracking-widest">
+              <div className="flex-1 flex items-center justify-center text-[#00ffcc]/50 text-4xl tracking-widest">
                 NENHUM REGISTRO ENCONTRADO
               </div>
             ) : (
               topScores.map((score, index) => (
                 <div 
                   key={score.id} 
-                  // Margens e gaps menores aqui também
-                  className={`grid grid-cols-[1fr_auto_80px] gap-4 items-center text-2xl py-1 px-4 rounded-lg transition-colors
-                    ${index === 0 ? 'bg-[#00ffcc]/10 border border-[#00ffcc]/30 text-white font-black' : 'text-[#00ffcc]/90'}`
+                  // Fonte aumentada de text-2xl para text-4xl (e text-5xl para o primeiro lugar)
+                  className={`grid grid-cols-[1fr_auto_100px] gap-4 items-center py-2 px-6 rounded-lg transition-colors
+                    ${index === 0 ? 'bg-[#00ffcc]/10 border border-[#00ffcc]/30 text-white font-black text-5xl' : 'text-[#00ffcc]/90 text-4xl'}`
                   }
                 >
-                  <div className="text-left flex items-center gap-3">
-                    <span className={`w-10 text-right text-xl ${index === 0 ? 'text-[#00ffcc]' : 'text-[#00ffcc]/50'}`}>
+                  <div className="text-left flex items-center gap-4">
+                    <span className={`w-14 text-right ${index === 0 ? 'text-[#00ffcc]' : 'text-[#00ffcc]/50'}`}>
                       {index + 1}.
                     </span>
                     <span className="tracking-[0.2em]">
@@ -172,7 +172,8 @@ export const Scoreboard3D = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any
                       <img 
                         src={`https://flagcdn.com/w40/${score.country.toLowerCase()}.png`} 
                         alt={score.country}
-                        className="w-9 h-auto rounded-sm border border-[#00ffcc]/30"
+                        // Bandeira um pouco maior (w-11)
+                        className="w-11 h-auto rounded-sm border border-[#00ffcc]/30"
                       />
                     ) : (
                       <span className="text-white/50">--</span>
