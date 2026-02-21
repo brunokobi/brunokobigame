@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
-import { X, Github, Linkedin, Mail, ExternalLink, Search, Trash2, MapPin, Globe, Radio } from 'lucide-react';
+import { X, Github, Linkedin, Mail, ExternalLink, Search, Trash2, MapPin, Globe, Radio ,Code2, Terminal, Cpu } from 'lucide-react';
 import { createClient } from "@supabase/supabase-js";
+
+
 
 // Se você não tiver react-icons instalado, pode usar ícones do lucide ou instalar: yarn add react-icons
 // Aqui estou usando Lucide para manter consistência com seu arquivo, mas simulei o estilo alien
@@ -340,43 +342,90 @@ const MapInterface = ({ closeModal }: { closeModal: () => void }) => {
 
 const AboutModal = () => {
   const { closeModal } = useGameStore();
+  // Lista das suas principais armas no arsenal dev
+  const techStack = ['IA & Computação Natural', 'Supabase', 'n8n', 'Python', 'React 3D'];
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      className="glass-card p-6 md:p-8 max-w-lg w-full mx-4 relative bg-slate-900/95 border border-cyan-500/30 rounded-xl shadow-2xl shadow-cyan-500/10"
+      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9, y: 20 }}
+      transition={{ type: "spring", duration: 0.5 }}
+      className="p-8 max-w-lg w-full mx-4 relative bg-[#050510]/90 backdrop-blur-xl border border-[#00ffcc]/30 rounded-2xl shadow-[0_0_50px_rgba(0,255,204,0.15)] overflow-hidden"
     >
-      <button onClick={closeModal} className="absolute top-4 right-4 text-slate-400 hover:text-white z-50">
-        <X size={24} />
+      {/* Luz de fundo decorativa */}
+      <div className="absolute -top-24 -left-24 w-48 h-48 bg-[#00ffcc]/20 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-600/20 rounded-full blur-[80px] pointer-events-none" />
+
+      {/* Botão de Fechar */}
+      <button 
+        onClick={closeModal} 
+        className="absolute top-5 right-5 text-slate-400 hover:text-[#00ffcc] transition-colors z-50 p-1 bg-slate-800/50 rounded-full hover:bg-slate-800"
+      >
+        <X size={20} />
       </button>
-      <div className="text-center mb-6">
-        <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-4xl shadow-lg ring-2 ring-cyan-500/50">
-          👽
+
+      {/* Cabeçalho do Perfil */}
+      <div className="text-center mb-6 relative z-10">
+        <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#00ffcc]/20 to-purple-600/20 flex items-center justify-center text-5xl shadow-[0_0_20px_rgba(0,255,204,0.2)] border-2 border-[#00ffcc]/50 relative group">
+          <div className="absolute inset-0 rounded-full bg-[#00ffcc]/20 animate-ping opacity-20" />
+          <span className="group-hover:scale-110 transition-transform duration-300">👽</span>
         </div>
-        <h2 className="text-2xl font-bold text-cyan-400 font-space tracking-wider">Bruno Kobi</h2>
-        <p className="text-slate-400 text-sm uppercase tracking-widest mt-1">Mestrando em IA & Full Stack</p>
+        <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00ffcc] to-cyan-300 font-mono tracking-widest uppercase">
+          Bruno Kobi
+        </h2>
+        <div className="flex items-center justify-center gap-2 mt-2 text-[#00ffcc]/70 text-xs font-bold uppercase tracking-[0.2em]">
+          <Terminal size={12} />
+          <span>Desenvolvedor & IA</span>
+        </div>
       </div>
-      <p className="text-slate-300 mb-6 text-center leading-relaxed">
-        Olá, humano! 🛸 Sou Mestrando em Computação Aplicada (IA) e Desenvolvedor.
-        Transformo café em código e algoritmos em soluções.
-      </p>
-      <div className="flex justify-center gap-4">
-        <a href="https://github.com/brunokobi" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white transition-colors border border-slate-600">
-          <Github size={20} /> GitHub
+
+      {/* Texto de Apresentação */}
+      <div className="bg-black/40 border border-white/5 rounded-xl p-5 mb-6 relative z-10">
+        <p className="text-slate-300 text-center leading-relaxed text-sm font-sans">
+          Saudações, terráqueo! 🛸 Sou Mestrando em Computação Aplicada com foco em Inteligência Artificial. 
+          Minha missão é transformar café em código, conectar sistemas complexos e abduzir problemas transformando-os em soluções eficientes.
+        </p>
+      </div>
+
+      {/* Badges de Tecnologias */}
+      <div className="flex flex-wrap justify-center gap-2 mb-8 relative z-10">
+        {techStack.map((tech, index) => (
+          <span 
+            key={index}
+            className="px-3 py-1 bg-[#00ffcc]/10 border border-[#00ffcc]/20 rounded-full text-[#00ffcc] text-[10px] font-bold tracking-widest uppercase flex items-center gap-1"
+          >
+            <Cpu size={10} />
+            {tech}
+          </span>
+        ))}
+      </div>
+
+      {/* Botões de Contato */}
+      <div className="grid grid-cols-2 gap-3 relative z-10">
+        <a 
+          href="https://github.com/brunokobi" 
+          target="_blank" 
+          rel="noreferrer" 
+          className="flex justify-center items-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-white transition-all border border-slate-600 hover:border-slate-500 hover:shadow-lg text-sm font-bold tracking-wider"
+        >
+          <Github size={18} /> GitHub
         </a>
-        <a href="https://www.linkedin.com/in/brunokobi/" target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded-lg text-white transition-colors">
-          <Linkedin size={20} /> LinkedIn
+        <a 
+          href="https://www.linkedin.com/in/brunokobi/" 
+          target="_blank" 
+          rel="noreferrer" 
+          className="flex justify-center items-center gap-2 px-4 py-3 bg-[#0a66c2]/80 hover:bg-[#0a66c2] rounded-xl text-white transition-all border border-[#0a66c2] hover:shadow-[0_0_15px_rgba(10,102,194,0.4)] text-sm font-bold tracking-wider"
+        >
+          <Linkedin size={18} /> LinkedIn
         </a>
-          <a
+        <a
           href="https://brunokobi.netlify.app/"
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 rounded-lg text-white transition-all shadow-lg hover:shadow-cyan-500/25 border border-white/10"
+          className="col-span-2 flex justify-center items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600/80 to-[#00ffcc]/80 hover:from-purple-600 hover:to-[#00ffcc] rounded-xl text-white transition-all shadow-lg hover:shadow-[0_0_20px_rgba(0,255,204,0.4)] border border-white/10 text-sm font-bold tracking-wider uppercase"
         >
-          <Globe size={20} /> Portfólio
+          <Globe size={18} /> Acessar Portfólio Principal
         </a>
-
       </div>
     </motion.div>
   );
