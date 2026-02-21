@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react'; 
+import { useEffect, useState, useRef } from 'react'; 
 import { useGameStore } from '@/store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { RotateCcw, Timer, Trophy, Send, CheckCircle2, AlertTriangle } from 'lucide-react'; 
-// CORREÇÃO: Certifique-se de que rodou 'bun add @supabase/supabase-js'
 import { createClient } from "@supabase/supabase-js";
 
 /* =========================================
-   CONFIGURAÇÃO SUPABASE (Igual ao seu modal de contato)
+   CONFIGURAÇÃO SUPABASE
    ========================================= */
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -44,9 +43,8 @@ export const HUD = () => {
   } = useGameStore();
   
   const totalSkills = skills.length;
-  const collectedSkills = skills.filter(s => s.collected);
   const progressPercent = (score / totalSkills) * 100;
-  const isComplete = score >= totalSkills;
+  const isComplete = score > 0 && score >= totalSkills;
 
   // --- ESTADOS DO PLACAR ---
   const [playerName, setPlayerName] = useState("");
@@ -58,6 +56,9 @@ export const HUD = () => {
   const [isCheckingRank, setIsCheckingRank] = useState(false);
   const [isTop10, setIsTop10] = useState(false);
   const [checkedRank, setCheckedRank] = useState(false);
+  
+  // Guarda o tempo final exato em ms para o banco de dados
+  const finalTimeMsRef = useRef<number>(0);
 
   // --- BUSCA IP AUTO ---
   useEffect(() => {
@@ -75,10 +76,16 @@ export const HUD = () => {
   // --- CHECA SE O TEMPO ENTROU NO TOP 10 ---
   useEffect(() => {
     const checkLeaderboard = async () => {
-      if (!isComplete || !startTime || !endTime) return;
+      if (!isComplete || !startTime) return;
       
       setIsCheckingRank(true);
-      const finalTimeMs = endTime - startTime;
+      
+      // Se a store não registrou o endTime, nós calculamos na hora de forma segura
+      const calcEndTime = endTime || Date.now();
+      const timeEmMs = calcEndTime - startTime;
+      finalTimeMsRef.current = timeEmMs;
+      
+      console.log("Tempo final (ms):", timeEmMs);
 
       try {
         const { data, error } = await supabase
@@ -87,12 +94,21 @@ export const HUD = () => {
           .order('time', { ascending: true })
           .limit(10);
 
-        if (!error && data) {
+        if (error) {
+          console.error("Erro no Supabase:", error);
+          setIsTop10(true); // Se der erro no BD, liberamos para o usuário tentar salvar
+          return;
+        }
+
+        console.log("Tempos no banco:", data);
+
+        if (data) {
           if (data.length < 10) {
+            console.log("Menos de 10 pessoas no ranking. Liberando form!");
             setIsTop10(true);
           } else {
-            const worstTop10Time = data[9].time;
-            if (finalTimeMs < worstTop10Time) {
+            const worstTop10Time = Number(data[data.length - 1].time);
+            if (timeEmMs <= worstTop10Time) {
               setIsTop10(true);
             } else {
               setIsTop10(false);
@@ -100,14 +116,16 @@ export const HUD = () => {
           }
         }
       } catch (err) {
-        console.error("Erro ao checar placar", err);
+        console.error("Erro inesperado:", err);
+        setIsTop10(true);
       } finally {
         setIsCheckingRank(false);
         setCheckedRank(true);
       }
     };
 
-    if (isComplete && !checkedRank) {
+    // Note que removemos a exigência do endTime aqui para garantir que rode
+    if (isComplete && !checkedRank && startTime) {
       checkLeaderboard();
     }
   }, [isComplete, startTime, endTime, checkedRank]);
@@ -115,21 +133,25 @@ export const HUD = () => {
   // --- SALVAR O TEMPO NO BANCO ---
   const handleSaveScore = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!playerName.trim() || !endTime || !startTime) return;
+    if (!playerName.trim() || finalTimeMsRef.current === 0) return;
 
     setIsSaving(true);
-    const finalTimeMs = endTime - startTime;
     const finalName = playerName.trim().toUpperCase().substring(0, 5);
 
     const { error } = await supabase
       .from('leaderboard')
-      .insert([{ name: finalName, time: finalTimeMs, country: countryCode }]);
+      .insert([{ 
+        name: finalName, 
+        time: finalTimeMsRef.current, 
+        country: countryCode 
+      }]);
 
     setIsSaving(false);
 
     if (!error) {
       setIsSaved(true);
     } else {
+      console.error("Erro ao salvar:", error);
       alert("Falha na transmissão. Tente novamente.");
     }
   };
@@ -151,19 +173,20 @@ export const HUD = () => {
       interval = setInterval(() => {
         setDisplayTime(formatTime(Date.now() - startTime));
       }, 10);
-    } else if (endTime && startTime) {
-      setDisplayTime(formatTime(endTime - startTime));
+    } else if ((endTime && startTime) || isComplete) {
+      // Congela a tela do tempo perfeitamente
+      const finalMoment = endTime || Date.now();
+      setDisplayTime(formatTime(finalMoment - startTime));
     }
     return () => clearInterval(interval);
   }, [isPlaying, startTime, endTime, isComplete]);
-
-  const finalTime = (endTime && startTime) ? formatTime(endTime - startTime) : displayTime;
 
   const handleRestart = () => {
     setIsSaved(false);
     setCheckedRank(false);
     setIsTop10(false);
     setPlayerName("");
+    finalTimeMsRef.current = 0;
     resetGame();
     setTimeout(() => {
       useGameStore.getState().startGame();
@@ -199,92 +222,114 @@ export const HUD = () => {
           {startTime && (
             <motion.div className={`flex items-center gap-3 px-4 py-2 rounded-xl border-2 font-mono text-xl font-bold shadow-lg backdrop-blur-md h-[88px] ${isComplete ? 'bg-yellow-500/90 border-yellow-300 text-black shadow-yellow-500/50' : 'bg-black/40 border-cyan-500/30 text-cyan-400 shadow-cyan-500/10'}`}>
               {isComplete ? <Trophy size={20}/> : <Timer className="animate-pulse" size={20}/>}
-              <span>{isComplete ? finalTime : displayTime}</span>
+              <span>{displayTime}</span>
             </motion.div>
           )}
         </div>
       </div>
 
-      {isComplete && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="fixed inset-0 flex items-center justify-center z-[100] pointer-events-auto bg-black/60 backdrop-blur-sm"
-        >
-          <div className="bg-black/90 rounded-2xl p-8 border-2 border-[#00ffcc] shadow-[0_0_50px_rgba(0,255,204,0.3)] text-center max-w-md w-full mx-4 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-[#00ffcc]/10 to-transparent pointer-events-none" />
-            <motion.div className="text-7xl mb-4 inline-block" animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 2 }}>🛸✨</motion.div>
-            <h2 className="text-3xl font-black text-[#00ffcc] mb-2 tracking-widest relative z-10">INVASÃO COMPLETA!</h2>
-            <div className="bg-[#00ffcc]/10 border border-[#00ffcc]/30 rounded-lg py-2 px-4 mb-6 inline-block">
-               <span className="text-[#00ffcc] font-mono font-bold text-xl">Tempo: {finalTime}</span>
-            </div>
+      <AnimatePresence>
+        {isComplete && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            className="fixed inset-0 flex items-center justify-center z-[100] pointer-events-auto bg-black/60 backdrop-blur-sm"
+          >
+            <div className="bg-black/90 rounded-2xl p-8 border-2 border-[#00ffcc] shadow-[0_0_50px_rgba(0,255,204,0.3)] text-center max-w-md w-full mx-4 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-b from-[#00ffcc]/10 to-transparent pointer-events-none" />
+              <motion.div className="text-7xl mb-4 inline-block" animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 2 }}>🛸✨</motion.div>
+              <h2 className="text-3xl font-black text-[#00ffcc] mb-2 tracking-widest relative z-10">INVASÃO COMPLETA!</h2>
+              <div className="bg-[#00ffcc]/10 border border-[#00ffcc]/30 rounded-lg py-2 px-4 mb-6 inline-block">
+                 <span className="text-[#00ffcc] font-mono font-bold text-xl">Tempo: {displayTime}</span>
+              </div>
 
-            <div className="mb-6 relative z-10 text-left">
-              {isCheckingRank ? (
-                <div className="flex justify-center text-[#00ffcc]/70 animate-pulse text-sm font-bold tracking-widest uppercase">Analisando ranking global...</div>
-              ) : isSaved ? (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center pb-2">
-                  <div className="flex justify-center mb-2"><CheckCircle2 size={48} className="text-[#00ffcc]" /></div>
-                  <p className="text-[#00ffcc] font-bold tracking-widest uppercase">RECORDE ENVIADO À NAVE MÃE!</p>
-                </motion.div>
-              ) : isTop10 ? (
-                <form onSubmit={handleSaveScore} className="space-y-4">
-                  <div className="flex gap-2">
-                    <div className="flex-1 space-y-1">
-                      <label className="text-[#00ffcc] text-[10px] font-bold tracking-widest uppercase ml-1">PILOTO (MAX 5)</label>
-                      <input
-                        type="text"
-                        required
-                        maxLength={5}
-                        value={playerName}
-                        onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
-                        placeholder="ALIEN"
-                        className="w-full bg-black border border-[#00ffcc]/40 rounded-lg px-4 py-3 text-[#00ffcc] font-black uppercase focus:outline-none focus:border-[#00ffcc] font-mono text-center text-xl"
-                      />
+              <div className="mb-6 relative z-10 text-left">
+                {isCheckingRank ? (
+                  <div className="flex justify-center text-[#00ffcc]/70 animate-pulse text-sm font-bold tracking-widest uppercase py-4">Analisando ranking global...</div>
+                ) : isSaved ? (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center pb-2">
+                    <div className="flex justify-center mb-2"><CheckCircle2 size={48} className="text-[#00ffcc]" /></div>
+                    <p className="text-[#00ffcc] font-bold tracking-widest uppercase">RECORDE ENVIADO À NAVE MÃE!</p>
+                  </motion.div>
+                ) : isTop10 ? (
+                  <form onSubmit={handleSaveScore} className="space-y-4">
+                    <div className="flex gap-2">
+                      <div className="flex-1 space-y-1">
+                        <label className="text-[#00ffcc] text-[10px] font-bold tracking-widest uppercase ml-1">PILOTO (MAX 5)</label>
+                        <input
+                          type="text"
+                          required
+                          maxLength={5}
+                          value={playerName}
+                          onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
+                          placeholder="ALIEN"
+                          className="w-full bg-black border border-[#00ffcc]/40 rounded-lg px-4 py-3 text-[#00ffcc] font-black uppercase focus:outline-none focus:border-[#00ffcc] font-mono text-center text-xl"
+                        />
+                      </div>
+                      <div className="w-[140px] space-y-1">
+                        <label className="text-[#00ffcc] text-[10px] font-bold tracking-widest uppercase ml-1">PAÍS</label>
+                        <div className="relative flex items-center">
+                          {/* Imagem flutuando à esquerda */}
+                          <div className="absolute left-3 pointer-events-none flex items-center">
+                            <img 
+                              src={`https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`} 
+                              alt={countryCode}
+                              className="w-8 h-[22px] object-cover rounded-sm border border-[#00ffcc]/30"
+                            />
+                          </div>
+                          {/* Select com padding na esquerda (pl-14) para não ficar em cima da imagem */}
+                          <select
+                            value={countryCode}
+                            onChange={(e) => setCountryCode(e.target.value)}
+                            className="w-full bg-black border border-[#00ffcc]/40 rounded-lg pl-14 pr-3 py-3 text-[#00ffcc] font-black focus:outline-none focus:border-[#00ffcc] text-xl cursor-pointer"
+                          >
+                            {/* Em vez do emoji, mostramos a sigla (BR, US) na lista */}
+                            {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                    <div className="w-[120px] space-y-1">
-                      <label className="text-[#00ffcc] text-[10px] font-bold tracking-widest uppercase ml-1">PAÍS</label>
-                      <select
-                        value={countryCode}
-                        onChange={(e) => setCountryCode(e.target.value)}
-                        className="w-full bg-black border border-[#00ffcc]/40 rounded-lg px-4 py-3 text-[#00ffcc] font-black focus:outline-none focus:border-[#00ffcc] text-2xl"
-                      >
-                        {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag}</option>)}
-                      </select>
-                    </div>
+                    <button 
+                      type="submit"
+                      disabled={isSaving || playerName.length < 2}
+                      className="w-full py-3 bg-[#00ffcc] hover:bg-[#00ccaa] text-black font-black tracking-widest rounded-lg transition-colors flex items-center justify-center gap-2 uppercase disabled:opacity-50"
+                    >
+                      {isSaving ? "TRANSMITINDO..." : <><Send size={18} /> GRAVAR NO PLACAR</>}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="text-center py-4 bg-slate-900/50 rounded-lg border border-slate-700">
+                    <div className="flex justify-center mb-2"><AlertTriangle size={32} className="text-yellow-500" /></div>
+                    <p className="text-white font-bold tracking-widest uppercase text-sm">Bom trabalho, mas...</p>
+                    <p className="text-slate-400 text-xs mt-1 px-4">Seu tempo não foi suficiente para o TOP 10 desta vez.</p>
                   </div>
-                  <button 
-                    type="submit"
-                    disabled={isSaving || playerName.length < 2}
-                    className="w-full py-3 bg-[#00ffcc] hover:bg-[#00ccaa] text-black font-black tracking-widest rounded-lg transition-colors flex items-center justify-center gap-2 uppercase"
-                  >
-                    {isSaving ? "TRANSMITINDO..." : <><Send size={18} /> GRAVAR NO PLACAR</>}
-                  </button>
-                </form>
-              ) : (
-                <div className="text-center py-4 bg-slate-900/50 rounded-lg border border-slate-700">
-                  <div className="flex justify-center mb-2"><AlertTriangle size={32} className="text-yellow-500" /></div>
-                  <p className="text-white font-bold tracking-widest uppercase text-sm">Bom trabalho, mas...</p>
-                  <p className="text-slate-400 text-xs mt-1 px-4">Seu tempo não foi suficiente para o TOP 10 desta vez.</p>
-                </div>
-              )}
+                )}
+              </div>
+
+              <button
+                onClick={handleRestart}
+                className="w-full py-4 bg-transparent border-2 border-[#00ffcc] hover:bg-[#00ffcc] text-[#00ffcc] hover:text-black font-black tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 relative z-10 uppercase"
+              >
+                <RotateCcw size={20} /> JOGAR NOVAMENTE
+              </button>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            <button
-              onClick={handleRestart}
-              className="w-full py-4 bg-transparent border-2 border-[#00ffcc] hover:bg-[#00ffcc] text-[#00ffcc] hover:text-black font-black tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 relative z-10 uppercase"
-            >
-              <RotateCcw size={20} /> JOGAR NOVAMENTE
-            </button>
-          </div>
-        </motion.div>
-      )}
-
-      {isAbducting && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed bottom-20 left-1/2 -translate-x-1/2 text-center pointer-events-none">
-          <div className="text-[#00ffcc] text-4xl font-black tracking-[0.5em] animate-pulse drop-shadow-[0_0_10px_#00ffcc]">ABDUZINDO...</div>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {isAbducting && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 text-center pointer-events-none"
+          >
+            <div className="text-[#00ffcc] text-4xl font-black tracking-[0.5em] animate-pulse drop-shadow-[0_0_10px_#00ffcc]">ABDUZINDO...</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
