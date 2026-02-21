@@ -129,15 +129,14 @@ export const Scoreboard3D = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any
             <p className="text-2xl tracking-widest text-[#00ffcc]/70 mt-3 uppercase font-sans font-bold">Fullstack Invasion - Leaderboard</p>
           </div>
 
-          {/* Cabeçalho da Tabela - Atualizado para "NOME" e ajustado o layout do grid */}
-          <div className="grid grid-cols-[1fr_auto_100px] gap-4 border-b-2 border-[#00ffcc]/30 pb-3 mb-4 text-3xl font-bold uppercase tracking-widest text-white/80 shrink-0">
-            {/* Adicionado padding para centralizar o cabeçalho 'NOME' visualmente */}
-            <div className="text-center pl-10">Nome</div> 
+          {/* NOVO GRID: 1fr pro Nome, 300px fixos pro Tempo, 150px fixos pra Bandeira */}
+          <div className="grid grid-cols-[1fr_300px_150px] gap-4 border-b-2 border-[#00ffcc]/30 pb-3 mb-4 text-3xl font-bold uppercase tracking-widest text-white/80 shrink-0 px-6">
+            <div className="text-left pl-14">Nome</div> 
             <div className="text-center">Tempo</div>
-            <div className="text-right pr-6">País</div>
+            <div className="text-center">País</div>
           </div>
 
-          <div className="flex flex-col flex-1 gap-3 pb-2 overflow-y-auto">
+          <div className="flex flex-col flex-1 gap-4 pb-2 overflow-y-auto px-6">
             {loading ? (
               <div className="flex-1 flex items-center justify-center animate-pulse text-[#00ffcc]/50 text-4xl tracking-widest">
                 SINCRONIZANDO DADOS...
@@ -150,31 +149,34 @@ export const Scoreboard3D = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any
               topScores.map((score, index) => (
                 <div 
                   key={score.id} 
-                  className={`grid grid-cols-[1fr_auto_100px] gap-4 items-center py-2 px-6 rounded-lg transition-colors
+                  // Usando o mesmo espaçamento fixo nas linhas
+                  className={`grid grid-cols-[1fr_300px_150px] gap-4 items-center py-2 px-4 rounded-lg transition-colors
                     ${index === 0 ? 'bg-[#00ffcc]/10 border border-[#00ffcc]/30 text-white font-black text-5xl' : 'text-[#00ffcc]/90 text-4xl'}`
                   }
                 >
-                  {/* Centralizado o texto do nome dentro da div */}
-                  <div className="text-center flex items-center justify-center gap-4">
-                    <span className={`w-14 text-right absolute left-8 ${index === 0 ? 'text-[#00ffcc]' : 'text-[#00ffcc]/50'}`}>
+                  {/* Nome alinhado à esquerda como você pediu */}
+                  <div className="text-left flex items-center gap-6">
+                    <span className={`w-12 text-right ${index === 0 ? 'text-[#00ffcc]' : 'text-[#00ffcc]/50'}`}>
                       {index + 1}.
                     </span>
-                    <span className="tracking-[0.2em] pl-8">
+                    <span className="tracking-[0.2em]">
                       {score.name.substring(0, 5).toUpperCase()}
                     </span>
                   </div>
                   
+                  {/* Tempo isolado e centralizado no seu próprio espaço de 300px */}
                   <div className="text-center font-bold tracking-[0.1em]">
                     {formatScoreTime(score.time)}
                   </div>
                   
-                  <div className="text-right flex justify-end items-center h-full">
+                  {/* Bandeira centralizada e bem maior */}
+                  <div className="flex justify-center items-center h-full">
                     {score.country ? (
                       <img 
                         src={`https://flagcdn.com/w80/${score.country.toLowerCase()}.png`} 
                         alt={score.country}
-                        // Bandeira aumentada (w-16 h-10) e forçada proporção com object-cover
-                        className="w-16 h-10 object-cover rounded-sm border border-[#00ffcc]/30"
+                        // Bandeira GIGANTE (w-20 h-52px)
+                        className="w-20 h-[52px] object-cover rounded-md border-2 border-[#00ffcc]/40 shadow-[0_0_10px_rgba(0,255,204,0.3)]"
                       />
                     ) : (
                       <span className="text-white/50">--</span>
