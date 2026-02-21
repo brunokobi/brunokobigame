@@ -129,9 +129,10 @@ export const Scoreboard3D = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any
             <p className="text-2xl tracking-widest text-[#00ffcc]/70 mt-3 uppercase font-sans font-bold">Fullstack Invasion - Leaderboard</p>
           </div>
 
-          {/* Cabeçalho da Tabela - Fonte aumentada de text-2xl para text-3xl */}
+          {/* Cabeçalho da Tabela - Atualizado para "NOME" e ajustado o layout do grid */}
           <div className="grid grid-cols-[1fr_auto_100px] gap-4 border-b-2 border-[#00ffcc]/30 pb-3 mb-4 text-3xl font-bold uppercase tracking-widest text-white/80 shrink-0">
-            <div className="text-left pl-6">Piloto</div>
+            {/* Adicionado padding para centralizar o cabeçalho 'NOME' visualmente */}
+            <div className="text-center pl-10">Nome</div> 
             <div className="text-center">Tempo</div>
             <div className="text-right pr-6">País</div>
           </div>
@@ -149,16 +150,16 @@ export const Scoreboard3D = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any
               topScores.map((score, index) => (
                 <div 
                   key={score.id} 
-                  // Fonte aumentada de text-2xl para text-4xl (e text-5xl para o primeiro lugar)
                   className={`grid grid-cols-[1fr_auto_100px] gap-4 items-center py-2 px-6 rounded-lg transition-colors
                     ${index === 0 ? 'bg-[#00ffcc]/10 border border-[#00ffcc]/30 text-white font-black text-5xl' : 'text-[#00ffcc]/90 text-4xl'}`
                   }
                 >
-                  <div className="text-left flex items-center gap-4">
-                    <span className={`w-14 text-right ${index === 0 ? 'text-[#00ffcc]' : 'text-[#00ffcc]/50'}`}>
+                  {/* Centralizado o texto do nome dentro da div */}
+                  <div className="text-center flex items-center justify-center gap-4">
+                    <span className={`w-14 text-right absolute left-8 ${index === 0 ? 'text-[#00ffcc]' : 'text-[#00ffcc]/50'}`}>
                       {index + 1}.
                     </span>
-                    <span className="tracking-[0.2em]">
+                    <span className="tracking-[0.2em] pl-8">
                       {score.name.substring(0, 5).toUpperCase()}
                     </span>
                   </div>
@@ -170,10 +171,10 @@ export const Scoreboard3D = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any
                   <div className="text-right flex justify-end items-center h-full">
                     {score.country ? (
                       <img 
-                        src={`https://flagcdn.com/w40/${score.country.toLowerCase()}.png`} 
+                        src={`https://flagcdn.com/w80/${score.country.toLowerCase()}.png`} 
                         alt={score.country}
-                        // Bandeira um pouco maior (w-11)
-                        className="w-11 h-auto rounded-sm border border-[#00ffcc]/30"
+                        // Bandeira aumentada (w-16 h-10) e forçada proporção com object-cover
+                        className="w-16 h-10 object-cover rounded-sm border border-[#00ffcc]/30"
                       />
                     ) : (
                       <span className="text-white/50">--</span>
