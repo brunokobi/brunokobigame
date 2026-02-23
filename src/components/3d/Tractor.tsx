@@ -1,402 +1,276 @@
 import { useMemo } from 'react';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
-import { RoundedBox } from '@react-three/drei';
+import { RoundedBox, Instance, Instances } from '@react-three/drei';
 import * as THREE from 'three';
 
-// --- COMPONENTE DE RODA REALISTA (COM GARRAS) ---
-const RealisticWheel = ({ position, radius, width, isRear }: { position: [number, number, number], radius: number, width: number, isRear: boolean }) => {
-  
-  // Materiais da roda
-  const matRubber = useMemo(() => new THREE.MeshStandardMaterial({ 
-    color: "#151515", roughness: 0.9, metalness: 0.1, flatShading: false // Borracha escura e fosca
-  }), []);
-  const matRimSteel = useMemo(() => new THREE.MeshStandardMaterial({ 
-    color: "#eeeeee", roughness: 0.4, metalness: 0.6 // Aço pintado de branco/creme
-  }), []);
-  const matLugNuts = useMemo(() => new THREE.MeshStandardMaterial({ 
-    color: "#333333", roughness: 0.3, metalness: 0.8 // Parafusos escuros
-  }), []);
+// ==========================================
+// PALETA DE CORES JOHN DEERE 
+// ==========================================
+const JD_GREEN = "#367c2b";
+const JD_YELLOW = "#ffde00";
+const TIRE_BLACK = "#151515"; // Mais escuro
+const METAL_BLACK = "#1a1a1a";
+const GLASS_COLOR = "#88ccff";
+const LIGHT_OFF_WHITE = "#ffffff";
 
-  // Geração das garras do pneu (Treads)
-  const numTreads = isRear ? 24 : 16; // Mais garras atrás
+// Materiais otimizados
+const materials = {
+  greenPaint: new THREE.MeshStandardMaterial({ color: JD_GREEN, roughness: 0.25, metalness: 0.15 }),
+  yellowPaint: new THREE.MeshStandardMaterial({ color: JD_YELLOW, roughness: 0.3, metalness: 0.1 }),
+  tireRubber: new THREE.MeshStandardMaterial({ color: TIRE_BLACK, roughness: 1.0, flatShading: false }),
+  blackMetal: new THREE.MeshStandardMaterial({ color: METAL_BLACK, roughness: 0.8, metalness: 0.5 }),
+  silverMetal: new THREE.MeshStandardMaterial({ color: "#888", roughness: 0.4, metalness: 0.8 }),
+  glass: new THREE.MeshStandardMaterial({ color: GLASS_COLOR, roughness: 0.05, metalness: 0.9, opacity: 0.4, transparent: true, side: THREE.DoubleSide }),
+  lightLens: new THREE.MeshStandardMaterial({ color: LIGHT_OFF_WHITE, emissive: LIGHT_OFF_WHITE, emissiveIntensity: 1.0 }),
+  redLight: new THREE.MeshStandardMaterial({ color: "#ff0000", emissive: "#ff0000", emissiveIntensity: 1.0 }),
+};
+
+// ==========================================
+// SUB-COMPONENTE: RODA SUPER DETALHADA
+// ==========================================
+const TractorWheel = ({ radius, width, isRear, position, rotation }: any) => {
+  const treadCount = isRear ? 24 : 16; 
+  const rimRadius = radius * 0.55;
+
   const treads = useMemo(() => {
     const items = [];
-    for (let i = 0; i < numTreads; i++) {
-      const angle = (i / numTreads) * Math.PI * 2;
-      items.push(
-        <group key={i} rotation={[angle, 0, 0]}>
-            {/* O "dente" do pneu, ligeiramente inclinado */}
-           <mesh position={[0, radius - 0.05, 0]} rotation={[0, 0.2, 0]}> 
-             <boxGeometry args={[width * 0.8, 0.15, 0.08]} />
-             <primitive object={matRubber} />
-           </mesh>
-        </group>
-      );
+    for (let i = 0; i < treadCount; i++) {
+      const angle = (i / treadCount) * Math.PI * 2;
+      items.push({
+        position: [0, Math.sin(angle) * radius, Math.cos(angle) * radius],
+        // As garras nos tratores fazem um "V". Alternamos o ângulo.
+        rotation: [angle + 0.1, (i % 2 === 0 ? 0.3 : -0.3), 0], 
+      });
     }
     return items;
-  }, [radius, width, numTreads, matRubber]);
+  }, [radius, treadCount]);
 
   return (
-    <group position={position}>
-      {/* Carcaça Principal do Pneu */}
+    <group position={position} rotation={rotation}>
+      {/* Pneu Central */}
       <mesh rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
-        <cylinderGeometry args={[radius * 0.95, radius * 0.95, width, 32]} />
-        <primitive object={matRubber} />
+        <cylinderGeometry args={[radius * 0.96, radius * 0.96, width, 32]} />
+        <primitive object={materials.tireRubber} />
       </mesh>
 
-      {/* As Garras do Pneu */}
-      <group rotation={[0, 0, Math.PI / 2]}>
-          {treads}
-      </group>
+      {/* Garras em "V" */}
+      <Instances>
+        {/* Garras mais finas e altas */}
+        <boxGeometry args={[width * 0.45, radius * 0.18, radius * 0.08]} />
+        <primitive object={materials.tireRubber} />
+        {treads.map((data, i) => {
+            // Desloca metade das garras para a esquerda e metade para a direita para formar o V
+            const xOffset = i % 2 === 0 ? width * 0.22 : -width * 0.22;
+            return <Instance key={i} position={[xOffset, data.position[1], data.position[2]]} rotation={data.rotation as any} />
+        })}
+      </Instances>
 
-      {/* Aro da Roda (Rim) - Com profundidade */}
+      {/* Aro Metálico Amarelo Complexo */}
       <group rotation={[0, 0, Math.PI / 2]}>
-          {/* Centro Afundado */}
+          {/* Prato do aro */}
+          <mesh position={[0, -width*0.1, 0]}>
+            <cylinderGeometry args={[rimRadius, rimRadius * 0.8, 0.1, 32]} />
+            <primitive object={materials.yellowPaint} />
+          </mesh>
+          {/* Borda do aro */}
+          <mesh position={[0, width*0.48, 0]}>
+             <torusGeometry args={[rimRadius, 0.04, 16, 32]} />
+             <primitive object={materials.yellowPaint} />
+          </mesh>
+          {/* Cubo central de aço */}
           <mesh position={[0, 0.05, 0]}>
-            <cylinderGeometry args={[radius * 0.5, radius * 0.55, 0.1, 24]} />
-            <primitive object={matRimSteel} />
+            <cylinderGeometry args={[rimRadius * 0.25, rimRadius * 0.3, width + 0.15, 16]} />
+            <primitive object={materials.blackMetal} />
           </mesh>
-          {/* Borda Externa */}
-          <mesh position={[0, -0.02, 0]}>
-            <torusGeometry args={[radius * 0.55, 0.05, 12, 32]} />
-            <primitive object={matRimSteel} />
-          </mesh>
-
-          {/* Parafusos da Roda (Lug Nuts) */}
-          {[0, 1, 2, 3, 4, 5].map((i) => {
-              const angle = (i / 6) * Math.PI * 2;
-              const dist = radius * 0.25;
+          {/* Parafusos */}
+          {[0,1,2,3,4,5,6,7].map((i) => {
+              const a = (i/8)*Math.PI*2;
+              const d = rimRadius * 0.4;
               return (
-                  <mesh key={i} position={[Math.sin(angle)*dist, 0.15, Math.cos(angle)*dist]}>
-                      <cylinderGeometry args={[0.04, 0.04, 0.1, 6]} />
-                      <primitive object={matLugNuts} />
+                  <mesh key={i} position={[Math.sin(a)*d, width*0.3, Math.cos(a)*d]}>
+                      <cylinderGeometry args={[0.03, 0.03, 0.1, 6]} />
+                      <primitive object={materials.silverMetal} />
                   </mesh>
               )
           })}
       </group>
-
-      {/* Cubo do Eixo */}
-      <mesh rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.15, 0.15, width + 0.2, 16]} />
-        <meshStandardMaterial color="#222" metalness={0.8} roughness={0.5} />
-      </mesh>
     </group>
   );
 };
 
-// --- COMPONENTE PRINCIPAL DO TRATOR ---
-export const Tractor = ({ position = [0, 0, 0] as [number, number, number], rotation = [0, 0, 0] as [number, number, number] }) => {
-  
-  // MATERIAIS REALISTAS
-  const mats = useMemo(() => ({
-    // Vermelho Agrícola: um pouco de brilho, mas com "casca de laranja" (rugosidade média)
-    paintRed: new THREE.MeshStandardMaterial({ color: "#c41e3a", roughness: 0.3, metalness: 0.2, envMapIntensity: 0.5 }),
-    // Metal do chassi/motor: Escuro, oleoso, metálico
-    chassisMetal: new THREE.MeshStandardMaterial({ color: "#2a2a2a", roughness: 0.6, metalness: 0.8 }),
-    // Vidro: Transparente, reflexivo
-    glass: new THREE.MeshStandardMaterial({ color: "#aaddff", roughness: 0.05, metalness: 0.9, transparent: true, opacity: 0.3, side: THREE.DoubleSide }),
-    // Plástico preto/borrachas (para detalhes da cabine)
-    blackTrim: new THREE.MeshStandardMaterial({ color: "#111111", roughness: 0.8 }),
-    // Luzes
-    lightLens: new THREE.MeshStandardMaterial({ color: "#ffffcc", roughness: 0.2, metalness: 0.5, transparent: true, opacity: 0.8 }),
-    lightEmissive: new THREE.MeshStandardMaterial({ color: "#ffffaa", emissive: "#ffffaa", emissiveIntensity: 3, toneMapped: false }),
-    tailLight: new THREE.MeshStandardMaterial({ color: "#ff0000", emissive: "#ff0000", emissiveIntensity: 1.5 }),
-  }), []);
 
+// ==========================================
+// COMPONENTE PRINCIPAL DO TRATOR
+// ==========================================
+export const TractorGreen = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any) => {
   return (
     <group position={position} rotation={rotation}>
       <RigidBody type="fixed" colliders={false}>
-        {/* Collider principal ajustado para a nova forma */}
-        <CuboidCollider args={[1.6, 1.8, 2.8]} position={[0, 1.8, 0]} />
-        
-        {/* ================= ESTRUTURA INFERIOR ================= */}
-        {/* Bloco do Motor e Chassi (Usando RoundedBox para bordas suaves de metal fundido) */}
-        <group position={[0, 1.1, 0.2]}>
-            <RoundedBox args={[1.3, 1.0, 4.2]} radius={0.05} smoothness={4} castShadow>
-                <primitive object={mats.chassisMetal} />
-            </RoundedBox>
-            {/* Detalhes laterais do motor (Aletas de refrigeração simuladas) */}
-            {[-1, 0, 1].map(z => (
-                <group key={z} position={[0, 0, z - 1]}>
-                    <mesh position={[0.66, 0, 0]}>
-                        <boxGeometry args={[0.05, 0.8, 0.6]} />
-                        <primitive object={mats.chassisMetal} />
-                    </mesh>
-                    <mesh position={[-0.66, 0, 0]}>
-                        <boxGeometry args={[0.05, 0.8, 0.6]} />
-                        <primitive object={mats.chassisMetal} />
-                    </mesh>
-                </group>
-            ))}
-        </group>
+        <CuboidCollider args={[1.6, 2.4, 3.2]} position={[0, 2.4, 0]} />
 
-        {/* Eixo Dianteiro Detalhado */}
-        <group position={[0, 0.8, -2]}>
-             <mesh rotation={[0, 0, Math.PI/2]}>
-                <cylinderGeometry args={[0.12, 0.12, 2.2, 16]} />
-                <primitive object={mats.chassisMetal} />
-             </mesh>
-             {/* Pivôs de direção */}
-             <mesh position={[1, 0, 0]}>
-                 <boxGeometry args={[0.3, 0.4, 0.3]} />
-                 <primitive object={mats.chassisMetal} />
-             </mesh>
-             <mesh position={[-1, 0, 0]}>
-                 <boxGeometry args={[0.3, 0.4, 0.3]} />
-                 <primitive object={mats.chassisMetal} />
-             </mesh>
-        </group>
+        {/* ================= CHASSI E MOTOR ================= */}
+        <group position={[0, 1.4, 0]}>
+          
+          {/* Motor / Transmissão (Detalhes Mecânicos) */}
+          <group position={[0, -0.2, 0.5]}>
+              <RoundedBox args={[1.1, 1.2, 4.0]} radius={0.05} castShadow>
+                <primitive object={materials.blackMetal} />
+              </RoundedBox>
+              {/* Cilindros/Filtros simulados nas laterais */}
+              {[-1.2, 0, 1.2].map(z => (
+                  <mesh key={z} position={[0.6, 0, z]} rotation={[0, 0, Math.PI/2]}>
+                      <cylinderGeometry args={[0.2, 0.2, 1.4, 16]} />
+                      <primitive object={materials.blackMetal} />
+                  </mesh>
+              ))}
+          </group>
+          
+          {/* Eixo Dianteiro e Suspensão */}
+          <group position={[0, -0.4, 2.8]}>
+              <mesh rotation={[0, 0, Math.PI/2]}>
+                  <cylinderGeometry args={[0.15, 0.15, 2.6, 16]} />
+                  <primitive object={materials.blackMetal} />
+              </mesh>
+              <mesh position={[0, 0.3, 0]}><boxGeometry args={[0.4, 0.6, 0.4]}/><primitive object={materials.blackMetal} /></mesh>
+          </group>
 
+          {/* CAPÔ (Hood) */}
+          <group position={[0, 0.8, 1.5]}>
+              {/* Peça principal do capô */}
+              <RoundedBox args={[1.4, 1.1, 2.8]} radius={0.15} castShadow>
+                <primitive object={materials.greenPaint} />
+              </RoundedBox>
+              
+              {/* A FAIXA AMARELA LATERAL (Assinatura John Deere) */}
+              <mesh position={[0.71, 0.2, 0]}><boxGeometry args={[0.02, 0.1, 2.5]} /><primitive object={materials.yellowPaint} /></mesh>
+              <mesh position={[-0.71, 0.2, 0]}><boxGeometry args={[0.02, 0.1, 2.5]} /><primitive object={materials.yellowPaint} /></mesh>
 
-        {/* ================= CAPÔ (HOOD) E GRADE ================= */}
-        <group position={[0, 2.05, -1.3]}>
-            {/* Capô principal suavizado */}
-            <RoundedBox args={[1.4, 1.2, 2.4]} radius={0.1} smoothness={8} castShadow>
-                <primitive object={mats.paintRed} />
-            </RoundedBox>
-            
-            {/* Nariz do Capô (Mais estreito na frente) */}
-            <group position={[0, -0.1, -1.3]}>
-                 <RoundedBox args={[1.3, 1.0, 0.4]} radius={0.08} smoothness={4} castShadow>
-                    <primitive object={mats.paintRed} />
-                </RoundedBox>
-            </group>
+              {/* Grade Frontal (Preta com moldura verde) */}
+              <group position={[0, -0.1, 1.41]}>
+                  <mesh><planeGeometry args={[1.2, 0.9]} /><meshStandardMaterial color="#050505" roughness={0.9} /></mesh>
+                  {/* Faróis integrados na grade */}
+                  <mesh position={[-0.4, 0.3, 0.01]}><boxGeometry args={[0.3, 0.15, 0.05]} /><primitive object={materials.lightLens} /></mesh>
+                  <mesh position={[0.4, 0.3, 0.01]}><boxGeometry args={[0.3, 0.15, 0.05]} /><primitive object={materials.lightLens} /></mesh>
+                  <spotLight position={[0, 0.3, 0.1]} angle={0.6} penumbra={0.4} intensity={20} distance={30} color={"#ffffee"} castShadow target-position={[0, -1, 10]} />
+              </group>
+          </group>
 
-            {/* Grade Frontal Detalhada */}
-            <group position={[0, -0.1, -1.51]}>
-                {/* Moldura da grade */}
-                 <mesh>
-                    <planeGeometry args={[1.1, 0.8]} />
-                    <meshStandardMaterial color="#111" roughness={0.5} />
+          {/* Pesos Frontais Detalhados */}
+          <group position={[0, 0.2, 3.1]}>
+             <RoundedBox args={[1.0, 0.7, 0.5]} radius={0.05} castShadow>
+               <primitive object={materials.greenPaint} />
+             </RoundedBox>
+             {/* Fatias dos pesos (10 fatias) */}
+             {[-0.45, -0.35, -0.25, -0.15, -0.05, 0.05, 0.15, 0.25, 0.35, 0.45].map((x, i) => (
+                <mesh key={i} position={[x, 0, 0.26]}>
+                   <boxGeometry args={[0.08, 0.65, 0.1]} />
+                   <primitive object={materials.greenPaint} />
                 </mesh>
-                {/* Barras horizontais da grade */}
-                {[-0.3, -0.15, 0, 0.15, 0.3].map((y, i) => (
-                    <mesh key={i} position={[0, y, 0.02]}>
-                        <boxGeometry args={[1.0, 0.05, 0.02]} />
-                        <meshStandardMaterial color="#333" metalness={0.8} />
-                    </mesh>
-                ))}
-                 {/* Logo Central */}
-                 <mesh position={[0, 0.1, 0.04]}>
-                     <circleGeometry args={[0.1, 16]} />
-                     <meshStandardMaterial color="#silver" metalness={1} roughness={0.2} />
-                 </mesh>
+             ))}
+          </group>
+
+          {/* Escapamento (Chaminé vertical) */}
+          <group position={[0.8, 1.8, 0.8]}>
+            <mesh position={[0, -0.5, 0]}><cylinderGeometry args={[0.15, 0.15, 1.0, 16]}/><meshStandardMaterial color="#333" roughness={0.9}/></mesh>
+            <mesh castShadow><cylinderGeometry args={[0.08, 0.08, 2.5, 16]} /><primitive object={materials.blackMetal} /></mesh>
+            <mesh position={[0, 1.25, -0.1]} rotation={[0.4, 0, 0]}><cylinderGeometry args={[0.09, 0.09, 0.3, 16]} /><primitive object={materials.blackMetal} /></mesh>
+          </group>
+        </group>
+
+
+        {/* ================= CABINE SUPER DETALHADA ================= */}
+        <group position={[0, 2.9, -1.2]}>
+            
+            {/* Interior Básico (Para ser visto pelo vidro) */}
+            <group position={[0, -0.5, 0.5]}>
+                {/* Banco */}
+                <RoundedBox args={[0.8, 0.2, 0.8]} position={[0, 0, -0.2]}><primitive object={materials.blackMetal} /></RoundedBox>
+                <RoundedBox args={[0.8, 0.9, 0.2]} position={[0, 0.5, -0.5]} rotation={[-0.1, 0, 0]}><primitive object={materials.blackMetal} /></RoundedBox>
+                {/* Painel/Volante */}
+                <mesh position={[0, 0.5, 0.8]} rotation={[0.5, 0, 0]}><cylinderGeometry args={[0.05, 0.08, 0.6]} /><primitive object={materials.blackMetal} /></mesh>
+                <mesh position={[0, 0.7, 0.6]} rotation={[2.0, 0, 0]}><torusGeometry args={[0.3, 0.05, 16, 32]} /><primitive object={materials.blackMetal} /></mesh>
             </group>
+
+            {/* Estrutura Verde (Rollcage) */}
+            <group castShadow>
+                {/* 6 Pilares para visual moderno */}
+                <mesh position={[-0.8, 0.8, 1.2]}> <boxGeometry args={[0.12, 1.6, 0.12]} /> <primitive object={materials.greenPaint} /> </mesh>
+                <mesh position={[0.8, 0.8, 1.2]}>  <boxGeometry args={[0.12, 1.6, 0.12]} /> <primitive object={materials.greenPaint} /> </mesh>
+                
+                <mesh position={[-0.8, 0.8, 0]}> <boxGeometry args={[0.1, 1.6, 0.1]} /> <primitive object={materials.blackMetal} /> </mesh>
+                <mesh position={[0.8, 0.8, 0]}>  <boxGeometry args={[0.1, 1.6, 0.1]} /> <primitive object={materials.blackMetal} /> </mesh>
+
+                <mesh position={[-0.8, 0.8, -1.2]}><boxGeometry args={[0.15, 1.6, 0.15]} /> <primitive object={materials.greenPaint} /> </mesh>
+                <mesh position={[0.8, 0.8, -1.2]}> <boxGeometry args={[0.15, 1.6, 0.15]} /> <primitive object={materials.greenPaint} /> </mesh>
+            </group>
+
+            {/* Teto Verde com receptor GPS Amarelo */}
+            <group position={[0, 1.65, 0]}>
+                <RoundedBox args={[1.9, 0.25, 2.8]} radius={0.08} castShadow>
+                    <primitive object={materials.greenPaint} />
+                </RoundedBox>
+                {/* O "Chapéu" do GPS John Deere StarFire */}
+                <mesh position={[0, 0.2, 0.8]}>
+                    <cylinderGeometry args={[0.2, 0.25, 0.2, 16]} />
+                    <primitive object={materials.yellowPaint} />
+                </mesh>
+                
+                {/* Luzes de Serviço (Worklights) */}
+                <group position={[0, 0, 1.4]}>
+                    <mesh position={[-0.6, 0, 0]}><boxGeometry args={[0.25, 0.1, 0.05]} /><primitive object={materials.lightLens} /></mesh>
+                    <mesh position={[0.6, 0, 0]}><boxGeometry args={[0.25, 0.1, 0.05]} /><primitive object={materials.lightLens} /></mesh>
+                </group>
+                <group position={[0, 0, -1.4]}>
+                    <mesh position={[-0.6, 0, 0]}><boxGeometry args={[0.25, 0.1, 0.05]} /><primitive object={materials.redLight} /></mesh>
+                    <mesh position={[0.6, 0, 0]}><boxGeometry args={[0.25, 0.1, 0.05]} /><primitive object={materials.redLight} /></mesh>
+                </group>
+            </group>
+            
+            {/* Vidros */}
+            <group>
+                <mesh position={[0, 0.8, 1.25]} rotation={[0.05, 0, 0]}> <boxGeometry args={[1.5, 1.5, 0.02]} /> <primitive object={materials.glass} /> </mesh> {/* Pára-brisa curvo */}
+                <mesh position={[0, 0.8, -1.25]}> <boxGeometry args={[1.5, 1.5, 0.02]} /> <primitive object={materials.glass} /> </mesh> {/* Traseiro */}
+                <mesh position={[-0.82, 0.8, 0]} rotation={[0, Math.PI/2, 0]}> <boxGeometry args={[2.4, 1.5, 0.02]} /> <primitive object={materials.glass} /> </mesh> {/* Porta Esq */}
+                <mesh position={[0.82, 0.8, 0]} rotation={[0, Math.PI/2, 0]}> <boxGeometry args={[2.4, 1.5, 0.02]} /> <primitive object={materials.glass} /> </mesh> {/* Porta Dir */}
+            </group>
+
+             {/* Degraus e Retrovisores */}
+             <group position={[-1.2, -1.0, 0.5]}>
+                <mesh position={[0, 0.6, 0]}><boxGeometry args={[0.4, 0.05, 0.8]} /><primitive object={materials.blackMetal} /></mesh>
+                <mesh position={[0.1, 0.2, 0]}><boxGeometry args={[0.3, 0.05, 0.8]} /><primitive object={materials.blackMetal} /></mesh>
+                <mesh position={[0.2, -0.2, 0]}><boxGeometry args={[0.2, 0.05, 0.8]} /><primitive object={materials.blackMetal} /></mesh>
+             </group>
+             
+             {/* Retrovisores longos */}
+             {[-1, 1].map((side, i) => (
+                 <group key={i} position={[side * 0.9, 1.0, 1.3]} rotation={[0, side * -0.2, 0]}>
+                     <mesh position={[side * 0.4, 0, 0]} rotation={[0, 0, side * 1.57]}><cylinderGeometry args={[0.03, 0.03, 0.8]} /><primitive object={materials.blackMetal} /></mesh>
+                     <mesh position={[side * 0.8, 0.2, 0]}><boxGeometry args={[0.2, 0.5, 0.05]} /><primitive object={materials.blackMetal} /></mesh>
+                 </group>
+             ))}
         </group>
 
 
-        {/* ================= CABINE REALISTA ================= */}
-        <group position={[0, 2.9, 1.3]}>
-           
-           {/* Estrutura ROPS (Roll Over Protection Structure) - Pilares mais finos */}
-           <group castShadow>
-               {/* Pilares Traseiros */}
-               <mesh position={[-0.8, 0, 0.9]}> <boxGeometry args={[0.15, 2, 0.15]} /> <primitive object={mats.paintRed} /> </mesh>
-               <mesh position={[0.8, 0, 0.9]}>  <boxGeometry args={[0.15, 2, 0.15]} /> <primitive object={mats.paintRed} /> </mesh>
-               {/* Pilares Dianteiros */}
-               <mesh position={[-0.8, 0, -0.9]}> <boxGeometry args={[0.12, 2, 0.12]} /> <primitive object={mats.paintRed} /> </mesh>
-               <mesh position={[0.8, 0, -0.9]}>  <boxGeometry args={[0.12, 2, 0.12]} /> <primitive object={mats.paintRed} /> </mesh>
-               
-               {/* Teto Suavizado */}
-               <group position={[0, 1.05, 0]}>
-                    <RoundedBox args={[1.9, 0.15, 2.3]} radius={0.05} smoothness={4} castShadow receiveShadow>
-                         <meshStandardMaterial color="#eeeeee" roughness={0.4} />
-                    </RoundedBox>
-               </group>
-           </group>
+        {/* ================= RODAS ================= */}
+        {/* Traseiras - Gigantes */}
+        <TractorWheel position={[-1.3, 1.8, -1.5]} rotation={[0, 0, Math.PI / 2]} radius={1.8} width={0.9} isRear={true} />
+        <TractorWheel position={[1.3, 1.8, -1.5]} rotation={[0, 0, Math.PI / 2]} radius={1.8} width={0.9} isRear={true} />
 
-           {/* Vidros com "Borracha" em volta */}
-           <group>
-               {/* Para-brisa Dianteiro */}
-               <mesh position={[0, 0, -0.88]}>
-                   <boxGeometry args={[1.55, 1.9, 0.05]} />
-                   <primitive object={mats.glass} />
-               </mesh>
-               {/* Vidro Traseiro */}
-               <mesh position={[0, 0, 0.88]}>
-                   <boxGeometry args={[1.55, 1.9, 0.05]} />
-                   <primitive object={mats.glass} />
-               </mesh>
-               {/* Vidros Laterais */}
-               <mesh position={[-0.78, 0, 0]} rotation={[0, Math.PI/2, 0]}>
-                   <boxGeometry args={[1.75, 1.9, 0.05]} />
-                   <primitive object={mats.glass} />
-               </mesh>
-               <mesh position={[0.78, 0, 0]} rotation={[0, Math.PI/2, 0]}>
-                   <boxGeometry args={[1.75, 1.9, 0.05]} />
-                   <primitive object={mats.glass} />
-               </mesh>
-           </group>
-
-           {/* Interior Básico Detalhado */}
-           <group position={[0, -0.8, 0.3]}>
-               {/* Banco */}
-               <RoundedBox args={[0.9, 0.2, 0.9]} radius={0.1} smoothness={4} position={[0, 0.1, 0]}>
-                   <meshStandardMaterial color="#333" roughness={1} />
-               </RoundedBox>
-               <RoundedBox args={[0.9, 1.0, 0.2]} radius={0.1} smoothness={4} position={[0, 0.6, 0.4]} rotation={[-0.2, 0, 0]}>
-                   <meshStandardMaterial color="#333" roughness={1} />
-               </RoundedBox>
-               
-               {/* Coluna de Direção e Volante */}
-               <group position={[0, 0.4, -1.0]}>
-                    <mesh rotation={[0.5, 0, 0]}>
-                        <cylinderGeometry args={[0.06, 0.08, 0.8]} />
-                        <primitive object={mats.blackTrim} />
-                    </mesh>
-                    <mesh position={[0, 0.45, -0.2]} rotation={[1.8, 0, 0]}>
-                        <torusGeometry args={[0.35, 0.06, 12, 32]} />
-                        <primitive object={mats.blackTrim} />
-                    </mesh>
-               </group>
-           </group>
-
-           {/* Detalhes Externos da Cabine */}
-           {/* Degraus (Steps) Lado Esquerdo */}
-           <group position={[-1.1, -1.5, 0.5]}>
-                <mesh position={[0, 0, 0]}> <boxGeometry args={[0.4, 0.05, 0.8]} /> <primitive object={mats.chassisMetal} /> </mesh>
-                <mesh position={[0.1, 0.5, 0]}> <boxGeometry args={[0.3, 0.05, 0.8]} /> <primitive object={mats.chassisMetal} /> </mesh>
-                {/* Suporte dos degraus */}
-                <mesh position={[0.15, 0.25, 0]} rotation={[0, 0, 0.2]}> <boxGeometry args={[0.05, 1.2, 0.05]} /> <primitive object={mats.chassisMetal} /> </mesh>
-           </group>
-           
-           {/* Espelhos Retrovisores */}
-           {[-1, 1].map((side, i) => (
-               <group key={i} position={[side * 1.1, 0.8, -0.9]} rotation={[0, side * -0.3, 0]}>
-                   {/* Haste */}
-                   <mesh position={[side * -0.1, 0, 0]} rotation={[0, 0, side * 0.5]}>
-                       <cylinderGeometry args={[0.03, 0.03, 0.5]} />
-                       <primitive object={mats.blackTrim} />
-                   </mesh>
-                   {/* Espelho */}
-                   <RoundedBox position={[side * 0.1, 0.2, 0]} args={[0.2, 0.4, 0.05]} radius={0.02}>
-                       <primitive object={mats.blackTrim} />
-                   </RoundedBox>
-                   {/* Superfície reflexiva */}
-                   <mesh position={[side * 0.1, 0.2, 0.03]}>
-                       <planeGeometry args={[0.18, 0.38]} />
-                       <meshStandardMaterial color="#ffffff" metalness={1} roughness={0} />
-                   </mesh>
-               </group>
-           ))}
-        </group>
-
-
-        {/* ================= RODAS REALISTAS ================= */}
-        {/* Traseiras (Grandes, com mais garras) */}
-        <RealisticWheel position={[-1.1, 1.25, 1.8]} radius={1.25} width={0.75} isRear={true} />
-        <RealisticWheel position={[1.1, 1.25, 1.8]} radius={1.25} width={0.75} isRear={true} />
-
-        {/* Dianteiras (Pequenas, menos garras) */}
-        <RealisticWheel position={[-1.1, 0.85, -2.0]} radius={0.85} width={0.55} isRear={false} />
-        <RealisticWheel position={[1.1, 0.85, -2.0]} radius={0.85} width={0.55} isRear={false} />
-
+        {/* Dianteiras */}
+        <TractorWheel position={[-1.2, 1.1, 2.8]} rotation={[0, 0, Math.PI / 2]} radius={1.1} width={0.65} isRear={false} />
+        <TractorWheel position={[1.2, 1.1, 2.8]} rotation={[0, 0, Math.PI / 2]} radius={1.1} width={0.65} isRear={false} />
 
         {/* ================= PARA-LAMAS (FENDERS) ================= */}
-        {/* Traseiros - Curvados (Simulados com múltiplas caixas rotacionadas) */}
-        {[-1, 1].map((side, i) => (
-            <group key={i} position={[side * 1.0, 2.6, 1.8]}>
-                {/* Topo */}
-                <RoundedBox args={[0.85, 0.08, 1.2]} radius={0.04} position={[0, 0, 0]} rotation={[0.1, 0, 0]}>
-                    <primitive object={mats.paintRed} />
-                </RoundedBox>
-                {/* Parte traseira inclinada */}
-                <RoundedBox args={[0.85, 0.08, 1.0]} radius={0.04} position={[0, -0.3, 1.0]} rotation={[-0.5, 0, 0]}>
-                    <primitive object={mats.paintRed} />
-                </RoundedBox>
-            </group>
-        ))}
-        
-        {/* Dianteiros - Menores, rotacionam com a roda (aqui estáticos para simplificar) */}
-        {[-1, 1].map((side, i) => (
-            <group key={i} position={[side * 1.1, 1.8, -2.0]}>
-                 <RoundedBox args={[0.6, 0.05, 1.4]} radius={0.02} rotation={[0.1, 0, 0]}>
-                    <primitive object={mats.blackTrim} />
-                </RoundedBox>
-            </group>
-        ))}
-
-
-        {/* ================= DETALHES FINAIS ================= */}
-        
-        {/* Escapamento (Chaminé) Detalhado */}
-        <group position={[0.7, 3.0, -1.6]}>
-           {/* Base com proteção térmica */}
-           <mesh position={[0, -0.5, 0]}>
-             <cylinderGeometry args={[0.12, 0.12, 1.2]} />
-             <meshStandardMaterial color="#555" roughness={0.7} /> {/* Metal perfurado simulado */}
-           </mesh>
-           {/* Tubo principal */}
-           <mesh castShadow>
-             <cylinderGeometry args={[0.08, 0.08, 2.2]} />
-             <primitive object={mats.chassisMetal} />
-           </mesh>
-           {/* Curva no topo (Rain cap) */}
-           <group position={[0, 1.1, 0]} rotation={[0, 0, -0.2]}>
-                <mesh rotation={[0.5, 0, 0]} position={[0, 0.1, -0.05]}>
-                    <cylinderGeometry args={[0.09, 0.09, 0.4]} />
-                     <primitive object={mats.chassisMetal} />
-                </mesh>
-           </group>
+        {/* Para-lamas Traseiros Verdes Grandes */}
+        <group position={[0, 3.2, -1.5]}>
+            <RoundedBox args={[1.2, 0.1, 2.4]} radius={0.05} position={[-1.3, 0, 0]} rotation={[0.1, 0, 0]} castShadow><primitive object={materials.greenPaint} /></RoundedBox>
+            <RoundedBox args={[1.2, 0.1, 2.4]} radius={0.05} position={[1.3, 0, 0]} rotation={[0.1, 0, 0]} castShadow><primitive object={materials.greenPaint} /></RoundedBox>
         </group>
         
-        {/* Filtro de Ar (Do outro lado do capô) */}
-        <group position={[-0.7, 2.5, -1.8]}>
-            <mesh>
-                <cylinderGeometry args={[0.15, 0.15, 0.6]} />
-                <primitive object={mats.blackTrim} />
-            </mesh>
-            <mesh position={[0, 0.4, 0]}>
-                <cylinderGeometry args={[0.2, 0.2, 0.2]} />
-                <primitive object={mats.blackTrim} />
-            </mesh>
-        </group>
-
-
-        {/* ================= ILUMINAÇÃO (Com lentes físicas) ================= */}
-        
-        {/* Faróis Dianteiros no Capô */}
-        <group position={[0, 2.1, -2.55]}>
-           {[-0.6, 0.6].map((x, i) => (
-               <group key={i} position={[x, 0, 0]}>
-                   {/* Carcaça do farol */}
-                   <mesh rotation={[1.57, 0, 0]}>
-                      <cylinderGeometry args={[0.18, 0.15, 0.2, 16]} />
-                      <primitive object={mats.blackTrim} />
-                   </mesh>
-                   {/* Lente de vidro */}
-                   <mesh rotation={[1.57, 0, 0]} position={[0, 0, -0.11]}>
-                      <circleGeometry args={[0.14, 16]} />
-                      <primitive object={mats.lightLens} />
-                   </mesh>
-                   {/* O emissor de luz (brilho) */}
-                   <mesh rotation={[1.57, 0, 0]} position={[0, 0, -0.12]}>
-                      <circleGeometry args={[0.12, 16]} />
-                      <primitive object={mats.lightEmissive} />
-                   </mesh>
-                   {/* A luz real */}
-                   <spotLight angle={0.5} penumbra={0.4} intensity={10} distance={30} color="#ffffdd" castShadow target-position={[x, 0, -15]} />
-               </group>
-           ))}
-        </group>
-
-        {/* Luzes de Trabalho no Teto da Cabine (Dianteiras e Traseiras) */}
-        <group position={[0, 4.05, 1.3]}>
-            {/* Dianteiras */}
-            {[-0.7, 0.7].map((x, i) => (
-                <mesh key={`front-${i}`} position={[x, 0, -1.15]}>
-                    <boxGeometry args={[0.25, 0.15, 0.1]} />
-                    <primitive object={mats.lightEmissive} />
-                    <spotLight angle={0.6} penumbra={0.5} intensity={5} distance={15} color="#ffffaa" target-position={[x, -5, -10]} />
-                </mesh>
-            ))}
-             {/* Traseiras (Vermelhas/Freio) */}
-            {[-0.7, 0.7].map((x, i) => (
-                <mesh key={`rear-${i}`} position={[x, 0, 1.15]}>
-                    <boxGeometry args={[0.25, 0.15, 0.1]} />
-                    <primitive object={mats.tailLight} />
-                </mesh>
-            ))}
+        {/* Para-lamas Dianteiros Pretos Pequenos */}
+        <group position={[0, 2.3, 2.8]}>
+            <RoundedBox args={[0.8, 0.05, 1.6]} radius={0.02} position={[-1.2, 0, 0]} rotation={[0.2, 0, 0]}><primitive object={materials.blackMetal} /></RoundedBox>
+            <RoundedBox args={[0.8, 0.05, 1.6]} radius={0.02} position={[1.2, 0, 0]} rotation={[0.2, 0, 0]}><primitive object={materials.blackMetal} /></RoundedBox>
         </group>
 
       </RigidBody>

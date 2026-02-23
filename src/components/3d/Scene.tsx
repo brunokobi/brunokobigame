@@ -1,6 +1,6 @@
 import { Suspense, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
+import { Physics } from '@react-three/rapier';
 import { Stars, PerspectiveCamera, OrbitControls, Cloud, Environment, Instance, Instances } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -13,6 +13,9 @@ import { TechCows } from './TechCows';
 import { Antenna } from './Antenna';
 import { Moon } from './Moon';
 import { Scoreboard3D } from './Scoreboard3D'; 
+
+// Importa o trator super detalhado que criamos no outro arquivo
+import { TractorGreen } from './TractorGreen'; 
 
 // --- IMPORTAÇÃO DO E.T. ---
 import { ETBikeVoxel } from './ETBikeVoxel'; 
@@ -54,36 +57,27 @@ const FlyingET = () => {
 
     // Se estiver no momento de voar, aplica a animação
     if (isFlying) {
-      // Move do eixo X=120 (direita invisível) para X=-120 (esquerda invisível)
       const startX = 120;
       const endX = -120;
       const currentX = startX + (endX - startX) * progress;
 
-      // Altura Y: Sobe no meio da tela (arco) e tem um pequeno balanço (seno)
-      // Ajustei o arco para ser um pouco mais suave devido à transição mais longa
       const arcHeight = Math.sin(progress * Math.PI) * 15; 
       const floatEffect = Math.sin(t * 4) * 0.5;
       const currentY = 25 + arcHeight + floatEffect;
 
-      // Eixo Z: Profundidade (atrás das pedras)
       const currentZ = -75;
 
       groupRef.current.position.set(currentX, currentY, currentZ);
       groupRef.current.visible = true;
 
-      // Inclina a frente da bike suavemente com o movimento
       groupRef.current.rotation.z = Math.sin(t * 2) * 0.05;
     } else {
-      // Fora dessas duas janelas de tempo, ele fica invisível
       groupRef.current.visible = false;
     }
   });
 
   return (
     <group ref={groupRef} visible={false}>
-      {/* Escala multiplicada por 2.5 para dar pra ver de longe.
-        Rotação no eixo Y ajustada para a bicicleta encarar a esquerda (-X) 
-      */}
       <group rotation={[0, -Math.PI / 1.5, 0]} scale={[2.5, 2.5, 2.5]}>
         <ETBikeVoxel />
       </group>
@@ -186,45 +180,6 @@ const CornField = ({ position = [0, 0, 0] as [number, number, number] }) => {
   );
 };
 
-/* =========================================
-   COMPONENTE: TRATOR
-   ========================================= */
-const Tractor = ({ position = [0, 0, 0] as [number, number, number], rotation = [0, 0, 0] as [number, number, number] }) => {
-  return (
-    <group position={position} rotation={rotation as any}>
-      <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[1.5, 2, 2.5]} position={[0, 2, 0]} />
-        <mesh position={[0, 1.2, 0]} castShadow><boxGeometry args={[1.8, 1, 3.5]} /><meshStandardMaterial color="#aa0000" roughness={0.2} /></mesh>
-        <group position={[0, 2.2, 0.5]}>
-           <mesh castShadow><boxGeometry args={[1.6, 1.5, 1.8]} /><meshStandardMaterial color="#880000" /></mesh>
-           <mesh position={[0, 0.2, 0.91]}><planeGeometry args={[1.4, 1]} /><meshStandardMaterial color="#88ccff" emissive="#446688" emissiveIntensity={0.5} /></mesh>
-        </group>
-        {[-1.1, 1.1].map((x, i) => (
-          <mesh key={i} position={[x, 1, 0.8]} rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[1, 1, 0.6, 16]} />
-            <meshStandardMaterial color="#111111" />
-            <mesh position={[0, 0.31, 0]}><circleGeometry args={[0.5, 16]} /><meshStandardMaterial color="#ddcc00" /></mesh>
-          </mesh>
-        ))}
-        {[-1, 1].map((x, i) => (
-          <mesh key={i} position={[x, 0.6, -1.5]} rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.6, 0.6, 0.4, 16]} />
-            <meshStandardMaterial color="#111111" />
-            <mesh position={[0, 0.21, 0]}><circleGeometry args={[0.3, 16]} /><meshStandardMaterial color="#ddcc00" /></mesh>
-          </mesh>
-        ))}
-        <group position={[0, 1.2, -1.8]}>
-           {[-0.5, 0.5].map((x, i) => (
-             <group key={i} position={[x, 0, 0]}>
-               <mesh><boxGeometry args={[0.3, 0.3, 0.1]} /><meshStandardMaterial color="#ffffaa" emissive="#ffffaa" /></mesh>
-               <spotLight position={[0, 0, -0.1]} angle={0.6} penumbra={0.4} intensity={8} distance={25} color="#ffffaa" castShadow target-position={[x, -2, -15]} />
-             </group>
-           ))}
-        </group>
-      </RigidBody>
-    </group>
-  );
-};
 
 /* =========================================
    COMPONENTE: HORIZONTE ROCHOSO
@@ -277,37 +232,27 @@ const RockyHorizon = () => {
 /* =========================================
    CONTEÚDO DA CENA PRINCIPAL
    ========================================= */
-/* =========================================
-   CONTEÚDO DA CENA PRINCIPAL
-   ========================================= */
 const SceneContent = () => {
-  // 1. Criamos uma referência para controlar a câmera
   const controlsRef = useRef<any>(null);
 
-  // 2. Animamos a câmera baseada no mesmo tempo do E.T.
   useFrame((state) => {
     if (!controlsRef.current) return;
     
     const t = state.clock.getElapsedTime();
     let isETFlying = false;
 
-    // Janelas de tempo exatas do voo do E.T. (15s->45s e 1m58s->2m28s)
     if ((t >= 15 && t <= 45) || (t >= 118 && t <= 148)) {
       isETFlying = true;
     }
 
-    // Se o E.T. estiver voando, o alvo da câmera sobe para Y = 12 (olha para o céu)
-    // Se não, volta para Y = 0 (olha para o chão/centro)
     const desiredTargetY = isETFlying ? 12 : 0;
     
-    // O THREE.MathUtils.lerp faz a transição ser super suave, como uma cutscene
     controlsRef.current.target.y = THREE.MathUtils.lerp(
       controlsRef.current.target.y, 
       desiredTargetY, 
-      0.015 // Velocidade da subida/descida da câmera (quanto menor, mais suave)
+      0.015
     );
     
-    // Atualiza o controle para aplicar a mudança
     controlsRef.current.update();
   });
 
@@ -315,7 +260,6 @@ const SceneContent = () => {
     <>
       <PerspectiveCamera makeDefault position={[0, 25, 55]} fov={55} />
       
-      {/* 3. Colocamos o ref no OrbitControls */}
       <OrbitControls 
         ref={controlsRef} 
         enablePan={false} 
@@ -337,7 +281,6 @@ const SceneContent = () => {
       <Moon />
       <RockyHorizon />
 
-      {/* --- EASTER EGG INSERIDO AQUI NA CENA --- */}
       <FlyingET />
 
       <Scoreboard3D position={[38, 8.5, 25]} rotation={[0, -0.5, 0]} />
@@ -351,7 +294,8 @@ const SceneContent = () => {
            <group position={[-5, 0, -20]}> 
              <CornField />
            </group>
-           <Tractor position={[0, 0, -2]} rotation={[0, 0.5, 0]} />
+           {/* Usa o trator verde novo! */}
+           <TractorGreen position={[8, 0, 8]} rotation={[0, -0.8, 0]}  scale={0.6}/>
            <group position={[5, 0, 10]}>
              <TechCows />
            </group>
