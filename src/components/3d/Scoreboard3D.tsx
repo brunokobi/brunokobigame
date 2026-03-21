@@ -59,7 +59,7 @@ export const Scoreboard3D = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any
       .channel('schema-db-changes')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'leaderboard' },
+        { event: '*', schema: 'public', table: 'leaderboard' },
         (payload) => {
           console.log('Nova pontuação detectada na rede Alien!', payload);
           fetchRealScores(true); 

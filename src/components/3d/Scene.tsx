@@ -1,7 +1,7 @@
 import { Suspense, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Stars, PerspectiveCamera, OrbitControls, Cloud, Environment, Instance, Instances } from '@react-three/drei';
+import { Stars, PerspectiveCamera, OrbitControls, Cloud, Environment, Instance, Instances, Loader } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Importação dos seus componentes externos
@@ -276,7 +276,7 @@ const SceneContent = () => {
 
       <Environment preset="night" blur={0.6} background={false} />
       <fogExp2 attach="fog" args={['#101025', 0.008]} /> 
-      <Stars radius={120} depth={50} count={7000} factor={4} saturation={0} fade speed={1} />
+      <Stars radius={120} depth={50} count={2000} factor={4} saturation={0} fade speed={1} />
 
       <Moon />
       <RockyHorizon />
@@ -338,6 +338,14 @@ export const Scene = () => {
           <SceneContent />
         </Suspense>
       </Canvas>
+      
+      {/* Adicionado: Tela de carregamento que sai suavemente quando a cena 3D termina de montar */}
+      <Loader 
+        containerStyles={{ backgroundColor: '#101025' }} // Fundo combinando com a cena
+        innerStyles={{ width: '300px' }}
+        barStyles={{ backgroundColor: '#00ffcc', height: '10px' }}
+        dataInterpolation={(p) => `Inicializando Invasão... ${p.toFixed(0)}%`}
+      />
     </div>
   );
 };

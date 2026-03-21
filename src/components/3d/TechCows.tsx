@@ -5,6 +5,12 @@ import { Text } from '@react-three/drei';
 import { useGameStore } from '@/store/gameStore';
 import * as THREE from 'three';
 
+// --- Materiais Globais Reutilizáveis (Otimização de Performance) ---
+const cowWhite = new THREE.MeshStandardMaterial({ color: "#f0f0f0", roughness: 0.8 });
+const cowBlack = new THREE.MeshStandardMaterial({ color: "#1a1a1a", roughness: 0.9 });
+const cowPink = new THREE.MeshStandardMaterial({ color: "#ffb7b2", roughness: 0.5 });
+const cowHorn = new THREE.MeshStandardMaterial({ color: "#ddd", roughness: 0.6 });
+
 // --- Interface das Propriedades ---
 interface TechCowProps {
   position: [number, number, number];
@@ -129,11 +135,6 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
     }
   });
 
-  // Materiais (sem alterações)
-  const cowWhite = new THREE.MeshStandardMaterial({ color: "#f0f0f0", roughness: 0.8 });
-  const cowBlack = new THREE.MeshStandardMaterial({ color: "#1a1a1a", roughness: 0.9 });
-  const cowPink = new THREE.MeshStandardMaterial({ color: "#ffb7b2", roughness: 0.5 });
-  const cowHorn = new THREE.MeshStandardMaterial({ color: "#ddd", roughness: 0.6 });
   const glowIntensity = abductionProgress > 0 ? 1 + abductionProgress * 2 : 0;
   const cowScale = 1 - abductionProgress * 0.3;
 

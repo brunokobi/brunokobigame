@@ -4,20 +4,20 @@ import { useGameStore } from '@/store/gameStore';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 
+// Materiais reutilizáveis fora do componente (Otimização)
+const barnRed = new THREE.MeshStandardMaterial({ color: "#7c2e2e", roughness: 0.9 });
+const woodTrim = new THREE.MeshStandardMaterial({ color: "#e0d3af", roughness: 0.8 });
+const roofDark = new THREE.MeshStandardMaterial({ color: "#2d2d2d", roughness: 0.6 });
+const doorWood = new THREE.MeshStandardMaterial({ color: "#4a3c31", roughness: 0.9 });
+const windowLight = new THREE.MeshStandardMaterial({ 
+  color: "#ffaa44", 
+  emissive: "#ffaa44", 
+  emissiveIntensity: 3 
+});
+
 export const Barn = () => {
   const { openModal } = useGameStore();
   const entered = useRef(false);
-
-  // Materiais reutilizáveis
-  const barnRed = new THREE.MeshStandardMaterial({ color: "#7c2e2e", roughness: 0.9 });
-  const woodTrim = new THREE.MeshStandardMaterial({ color: "#e0d3af", roughness: 0.8 });
-  const roofDark = new THREE.MeshStandardMaterial({ color: "#2d2d2d", roughness: 0.6 });
-  const doorWood = new THREE.MeshStandardMaterial({ color: "#4a3c31", roughness: 0.9 });
-  const windowLight = new THREE.MeshStandardMaterial({ 
-    color: "#ffaa44", 
-    emissive: "#ffaa44", 
-    emissiveIntensity: 3 
-  });
 
   // Função unificada para abrir o modal
   const handleInteract = () => {

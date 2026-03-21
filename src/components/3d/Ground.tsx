@@ -35,3 +35,6 @@ export const Ground = () => {
     </RigidBody>
   );
 };
+
+// Precarrega a textura para agilizar o carregamento inicial da cena
+useTexture.preload('/textures/grass.jpg');

@@ -2,23 +2,24 @@ import { useGameStore } from '@/store/gameStore';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 
+// ==========================================
+// MATERIAIS (Cores no estilo Voxel/Minecraft)
+// Instanciados fora para garantir performance
+// ==========================================
+const redHoodie = new THREE.MeshStandardMaterial({ color: "#cc0000", roughness: 0.9 });
+const blueJeans = new THREE.MeshStandardMaterial({ color: "#1e4b85", roughness: 0.9 });
+const skinTone = new THREE.MeshStandardMaterial({ color: "#fcd0b4", roughness: 0.6 });
+const hairColor = new THREE.MeshStandardMaterial({ color: "#3b2818", roughness: 1.0 });
+
+const whiteBlanket = new THREE.MeshStandardMaterial({ color: "#e0e0e0", roughness: 1.0 });
+const etSkin = new THREE.MeshStandardMaterial({ color: "#8b5a2b", roughness: 0.8 });
+
+const bikeRed = new THREE.MeshStandardMaterial({ color: "#aa0000", roughness: 0.5, metalness: 0.3 });
+const darkGrey = new THREE.MeshStandardMaterial({ color: "#222222", roughness: 0.8 });
+const basketWood = new THREE.MeshStandardMaterial({ color: "#d4a373", roughness: 1.0 });
+
 export const ETBikeVoxel = () => {
   const { openModal } = useGameStore(); 
-
-  // ==========================================
-  // MATERIAIS (Cores no estilo Voxel/Minecraft)
-  // ==========================================
-  const redHoodie = new THREE.MeshStandardMaterial({ color: "#cc0000", roughness: 0.9 });
-  const blueJeans = new THREE.MeshStandardMaterial({ color: "#1e4b85", roughness: 0.9 });
-  const skinTone = new THREE.MeshStandardMaterial({ color: "#fcd0b4", roughness: 0.6 });
-  const hairColor = new THREE.MeshStandardMaterial({ color: "#3b2818", roughness: 1.0 });
-  
-  const whiteBlanket = new THREE.MeshStandardMaterial({ color: "#e0e0e0", roughness: 1.0 });
-  const etSkin = new THREE.MeshStandardMaterial({ color: "#8b5a2b", roughness: 0.8 });
-  
-  const bikeRed = new THREE.MeshStandardMaterial({ color: "#aa0000", roughness: 0.5, metalness: 0.3 });
-  const darkGrey = new THREE.MeshStandardMaterial({ color: "#222222", roughness: 0.8 });
-  const basketWood = new THREE.MeshStandardMaterial({ color: "#d4a373", roughness: 1.0 });
 
   const handleInteract = () => {
     openModal('about'); 
