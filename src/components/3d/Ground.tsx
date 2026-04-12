@@ -6,9 +6,10 @@ export const Ground = () => {
   // 1. Carrega a textura
   const grassTexture = useTexture('/textures/grass.jpg');
 
-  // 2. Configura a repetição
+  // 2. Configura a repetição e o color space correto (evita aparência acinzentada)
   grassTexture.wrapS = grassTexture.wrapT = THREE.RepeatWrapping;
-  grassTexture.repeat.set(20, 20);
+  grassTexture.repeat.set(12, 12);
+  grassTexture.colorSpace = THREE.SRGBColorSpace;
 
   return (
     // 'colliders={false}' desliga a geração automática (que falha em planos)

@@ -23,10 +23,15 @@ const ProjectsCube = ({ position }: { position: [number, number, number] }) => {
 
   return (
     <group position={position}>
-      {/* Base Visual */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
-        <ringGeometry args={[1.5, 3, 32]} />
-        <meshStandardMaterial color="#1a0a0a" roughness={1} opacity={0.5} transparent />
+      {/* Sombra externa difusa */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <circleGeometry args={[2.8, 32]} />
+        <meshBasicMaterial color="#000000" opacity={0.18} transparent depthWrite={false} />
+      </mesh>
+      {/* Sombra interna mais densa (forma retangular da pasta) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <planeGeometry args={[2.8, 2.2]} />
+        <meshBasicMaterial color="#000000" opacity={0.22} transparent depthWrite={false} />
       </mesh>
 
       <Float speed={2} rotationIntensity={0.2} floatIntensity={1}>
@@ -102,9 +107,15 @@ const MapCube = ({ position }: { position: [number, number, number] }) => {
 
   return (
     <group position={position}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
-        <ringGeometry args={[1.5, 3, 32]} />
-        <meshStandardMaterial color="#0a0a1a" roughness={1} opacity={0.5} transparent />
+      {/* Sombra externa difusa */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <circleGeometry args={[2.8, 32]} />
+        <meshBasicMaterial color="#000000" opacity={0.18} transparent depthWrite={false} />
+      </mesh>
+      {/* Sombra interna mais densa (forma circular do globo) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <circleGeometry args={[1.6, 32]} />
+        <meshBasicMaterial color="#000000" opacity={0.25} transparent depthWrite={false} />
       </mesh>
 
       <Float speed={2} rotationIntensity={0.2} floatIntensity={1}>

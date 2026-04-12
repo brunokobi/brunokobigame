@@ -156,9 +156,9 @@ const CornField = ({ position = [0, 0, 0] as [number, number, number] }) => {
 
   return (
     <group position={position}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[SIZE, SIZE]} />
-        <meshStandardMaterial color="#1a120b" roughness={1} />
+        <meshStandardMaterial color="#4a5020" roughness={1} />
       </mesh>
       <group ref={plantsRef}>
         <Instances range={COUNT}>

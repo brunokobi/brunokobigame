@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l \"I:/ORBITGEO/brunokobigame/src\"/**/*.tsx \"I:/ORBITGEO/brunokobigame/src\"/**/**/*.tsx)",
+      "Bash(git -C \"I:/ORBITGEO/brunokobigame\" log --oneline)"
+    ]
+  }
+}
