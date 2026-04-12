@@ -154,12 +154,29 @@ const CornField = ({ position = [0, 0, 0] as [number, number, number] }) => {
     }
   });
 
+  const furrowCount = 22;
+  const furrowSpacing = SIZE / furrowCount;
+  const furrows = useMemo(() =>
+    Array.from({ length: furrowCount }, (_, i) => i * furrowSpacing - SIZE / 2 + furrowSpacing / 2),
+  []);
+
   return (
     <group position={position}>
+      {/* Chão da plantação */}
       <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[SIZE, SIZE]} />
-        <meshStandardMaterial color="#4a5020" roughness={1} />
+        <meshStandardMaterial color="#3d2d12" roughness={1} />
       </mesh>
+
+      {/* Sulcos arados — cristas levemente elevadas correndo ao longo do eixo Z */}
+      <Instances range={furrowCount}>
+        <boxGeometry args={[furrowSpacing * 0.55, 0.07, SIZE]} />
+        <meshStandardMaterial color="#4e3a1a" roughness={1} />
+        {furrows.map((x, i) => (
+          <Instance key={`furrow-${i}`} position={[x, 0.055, 0]} />
+        ))}
+      </Instances>
+
       <group ref={plantsRef}>
         <Instances range={COUNT}>
           <cylinderGeometry args={[0.04, 0.08, 1, 6]} />
