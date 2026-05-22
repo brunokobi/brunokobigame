@@ -253,23 +253,19 @@ const SceneContent = () => {
 
   useFrame((state) => {
     if (!controlsRef.current) return;
-    
+
     const t = state.clock.getElapsedTime();
-    let isETFlying = false;
-
-    if ((t >= 15 && t <= 45) || (t >= 118 && t <= 148)) {
-      isETFlying = true;
-    }
-
+    const isETFlying = (t >= 15 && t <= 45) || (t >= 118 && t <= 148);
     const desiredTargetY = isETFlying ? 12 : 0;
-    
-    controlsRef.current.target.y = THREE.MathUtils.lerp(
-      controlsRef.current.target.y, 
-      desiredTargetY, 
-      0.015
-    );
-    
-    controlsRef.current.update();
+    const currentY = controlsRef.current.target.y;
+    const diff = Math.abs(currentY - desiredTargetY);
+
+    // Só atualiza quando está lerping de fato (diff relevante)
+    // Evita update() desnecessário em ~99% dos frames
+    if (diff > 0.001) {
+      controlsRef.current.target.y = THREE.MathUtils.lerp(currentY, desiredTargetY, 0.015);
+      controlsRef.current.update();
+    }
   });
 
   return (

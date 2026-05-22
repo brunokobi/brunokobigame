@@ -31,5 +31,18 @@ export default defineConfig(({ mode }) => ({
     commonjsOptions: {
       transformMixedEsModules: true,
     },
+    // Divide o bundle em chunks separados para carregamento paralelo e melhor cache
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'three-core':  ['three'],
+          'three-fiber': ['@react-three/fiber', '@react-three/drei'],
+          'rapier':      ['@react-three/rapier'],
+          'framer':      ['framer-motion'],
+          'supabase':    ['@supabase/supabase-js'],
+          'vendor':      ['react', 'react-dom', 'react-router-dom', 'zustand'],
+        },
+      },
+    },
   },
 }));

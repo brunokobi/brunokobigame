@@ -432,7 +432,7 @@ const AboutModal = () => {
 };
 
 const ProjectListModal = () => {
-  const { closeModal, setProject } = useGameStore();
+  const { closeModal } = useGameStore();
 
   const handleCardClick = (id: string) => {
     if (id === 'mapas') {

@@ -32,15 +32,16 @@ const COUNTRIES = [
 ];
 
 export const HUD = () => {
-  const { 
-    score, 
-    skills, 
-    isAbducting, 
-    resetGame, 
-    startTime, 
-    endTime, 
-    isPlaying 
-  } = useGameStore();
+  // Seletores granulares — cada campo tem sua própria subscription.
+  // O HUD só re-renderiza quando esses valores específicos mudam,
+  // não a cada mudança qualquer no store.
+  const score = useGameStore(state => state.score);
+  const skills = useGameStore(state => state.skills);
+  const isAbducting = useGameStore(state => state.isAbducting);
+  const resetGame = useGameStore(state => state.resetGame);
+  const startTime = useGameStore(state => state.startTime);
+  const endTime = useGameStore(state => state.endTime);
+  const isPlaying = useGameStore(state => state.isPlaying);
   
   const totalSkills = skills.length;
   const progressPercent = (score / totalSkills) * 100;
@@ -172,7 +173,7 @@ export const HUD = () => {
     if (isPlaying && startTime && !isComplete) {
       interval = setInterval(() => {
         setDisplayTime(formatTime(Date.now() - startTime));
-      }, 10);
+      }, 50); // 50ms = 20fps para o display — imperceptível e 5× menos re-renders
     } else if ((endTime && startTime) || isComplete) {
       // Congela a tela do tempo perfeitamente
       const finalMoment = endTime || Date.now();
