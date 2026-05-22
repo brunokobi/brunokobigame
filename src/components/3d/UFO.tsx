@@ -194,7 +194,6 @@ export const UFO = () => {
           penumbra={0.5}
           intensity={isAbducting ? 200 : 0}
           color="#00ffcc"
-          castShadow
           distance={20}
           attenuation={5}
           anglePower={4}

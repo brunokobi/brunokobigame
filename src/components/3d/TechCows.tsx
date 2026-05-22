@@ -182,7 +182,7 @@ const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
       linearDamping={1}
       angularDamping={1}
       colliders={false}
-      ccd={true}
+      ccd={false}
     >
       <group ref={cowGroupRef} visible={!isHidden}>
         {/* Esfera de brilho — sempre renderizada, controlada via ref (sem conditional render) */}

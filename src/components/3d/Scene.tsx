@@ -1,7 +1,7 @@
-import { Suspense, useMemo, useRef } from 'react';
+import { Suspense, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Stars, PerspectiveCamera, OrbitControls, Cloud, Environment, Instance, Instances, Loader, AdaptiveDpr } from '@react-three/drei';
+import { Stars, PerspectiveCamera, OrbitControls, Cloud, Instance, Instances, Loader, AdaptiveDpr } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Importação dos seus componentes externos
@@ -22,67 +22,59 @@ import { ETBikeVoxel } from './ETBikeVoxel';
 
 /* =========================================
    COMPONENTE: E.T. VOADOR (EASTER EGG ANIMADO)
+   Geometria montada apenas durante as janelas de voo,
+   não fica no scene graph o tempo todo.
    ========================================= */
-const FlyingET = () => {
+const FlyingETInner = () => {
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
     if (!groupRef.current) return;
-
-    // Pega o tempo decorrido desde que a cena carregou
     const t = state.clock.getElapsedTime();
 
-    // Duração da transição para ambos os voos
-    const duracaoTransicao = 30;
+    const inVoo1 = t >= 15 && t <= 45;
+    const inVoo2 = t >= 118 && t <= 148;
+    const progress = inVoo1
+      ? (t - 15) / 30
+      : inVoo2
+      ? (t - 118) / 30
+      : 0;
 
-    // Tempos de início para os dois voos
-    const inicioVoo1 = 15;
-    const fimVoo1 = inicioVoo1 + duracaoTransicao; // 45s
-
-    // 1 minuto e 58 segundos são 118 segundos (60 + 58)
-    const inicioVoo2 = 118;
-    const fimVoo2 = inicioVoo2 + duracaoTransicao; // 148s
-
-    let isFlying = false;
-    let progress = 0;
-
-    // Checa em qual janela de tempo estamos
-    if (t >= inicioVoo1 && t <= fimVoo1) {
-      isFlying = true;
-      progress = (t - inicioVoo1) / duracaoTransicao;
-    } else if (t >= inicioVoo2 && t <= fimVoo2) {
-      isFlying = true;
-      progress = (t - inicioVoo2) / duracaoTransicao;
-    }
-
-    // Se estiver no momento de voar, aplica a animação
-    if (isFlying) {
-      const startX = 120;
-      const endX = -120;
-      const currentX = startX + (endX - startX) * progress;
-
-      const arcHeight = Math.sin(progress * Math.PI) * 15; 
-      const floatEffect = Math.sin(t * 4) * 0.5;
-      const currentY = 25 + arcHeight + floatEffect;
-
-      const currentZ = -75;
-
-      groupRef.current.position.set(currentX, currentY, currentZ);
-      groupRef.current.visible = true;
-
-      groupRef.current.rotation.z = Math.sin(t * 2) * 0.05;
-    } else {
-      groupRef.current.visible = false;
-    }
+    const startX = 120;
+    const endX = -120;
+    groupRef.current.position.set(
+      startX + (endX - startX) * progress,
+      25 + Math.sin(progress * Math.PI) * 15 + Math.sin(t * 4) * 0.5,
+      -75
+    );
+    groupRef.current.rotation.z = Math.sin(t * 2) * 0.05;
   });
 
   return (
-    <group ref={groupRef} visible={false}>
+    <group ref={groupRef}>
       <group rotation={[0, -Math.PI / 1.5, 0]} scale={[2.5, 2.5, 2.5]}>
         <ETBikeVoxel />
       </group>
     </group>
   );
+};
+
+const FlyingET = () => {
+  const [isActive, setIsActive] = useState(false);
+  const wasActiveRef = useRef(false);
+
+  // Só atualiza state nas bordas das janelas de voo (4× em 148s)
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    const flying = (t >= 15 && t <= 45) || (t >= 118 && t <= 148);
+    if (flying !== wasActiveRef.current) {
+      wasActiveRef.current = flying;
+      setIsActive(flying);
+    }
+  });
+
+  if (!isActive) return null;
+  return <FlyingETInner />;
 };
 
 /* =========================================
@@ -294,12 +286,25 @@ const SceneContent = () => {
       />
 
       <ambientLight intensity={0.6} color="#666677" />
-      <directionalLight position={[-50, 60, -50]} intensity={4.0} color="#cceeff" castShadow shadow-bias={-0.0001} />
+      <directionalLight
+        position={[-50, 60, -50]}
+        intensity={4.0}
+        color="#cceeff"
+        castShadow
+        shadow-bias={-0.0001}
+        shadow-mapSize-width={512}
+        shadow-mapSize-height={512}
+        shadow-camera-near={1}
+        shadow-camera-far={200}
+        shadow-camera-left={-80}
+        shadow-camera-right={80}
+        shadow-camera-top={80}
+        shadow-camera-bottom={-80}
+      />
       <pointLight position={[50, 30, 50]} intensity={1.5} color="#aa88cc" distance={100} decay={2} />
       <hemisphereLight skyColor="#223344" groundColor="#050510" intensity={1} />
 
-      <Environment preset="night" blur={0.6} background={false} />
-      <fogExp2 attach="fog" args={['#101025', 0.008]} /> 
+      <fog attach="fog" args={['#101025', 60, 220]} />
       <Stars radius={120} depth={50} count={1000} factor={4} saturation={0} fade speed={1} />
 
       <Moon />

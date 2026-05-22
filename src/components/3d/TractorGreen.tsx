@@ -29,7 +29,7 @@ const TractorWheel = ({ radius, width, position }: any) => {
   return (
     <group position={position}>
       <mesh rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
-        <cylinderGeometry args={[radius, radius, width, 32]} />
+        <cylinderGeometry args={[radius, radius, width, 16]} />
         <primitive object={materials.tireRubber} />
       </mesh>
     </group>
@@ -89,7 +89,7 @@ export const TractorGreen = ({ position = [0, 0, 0], rotation = [0, 0, 0], scale
                     <mesh><planeGeometry args={[1.2, 0.9]} /><meshStandardMaterial color="#050505" roughness={0.9} /></mesh>
                     <mesh position={[-0.4, 0.3, 0.01]}><boxGeometry args={[0.3, 0.15, 0.05]} /><primitive object={materials.lightLens} /></mesh>
                     <mesh position={[0.4, 0.3, 0.01]}><boxGeometry args={[0.3, 0.15, 0.05]} /><primitive object={materials.lightLens} /></mesh>
-                    <spotLight position={[0, 0.3, 0.1]} angle={0.6} penumbra={0.4} intensity={20} distance={30} color={"#ffffee"} castShadow target-position={[0, -1, 10]} />
+                    <spotLight position={[0, 0.3, 0.1]} angle={0.6} penumbra={0.4} intensity={20} distance={30} color={"#ffffee"} target-position={[0, -1, 10]} />
                 </group>
             </group>
 
@@ -120,7 +120,7 @@ export const TractorGreen = ({ position = [0, 0, 0], rotation = [0, 0, 0], scale
                     <RoundedBox args={[0.8, 0.2, 0.8]} position={[0, 0, -0.2]}><primitive object={materials.blackMetal} /></RoundedBox>
                     <RoundedBox args={[0.8, 0.9, 0.2]} position={[0, 0.5, -0.5]} rotation={[-0.1, 0, 0]}><primitive object={materials.blackMetal} /></RoundedBox>
                     <mesh position={[0, 0.5, 0.8]} rotation={[0.5, 0, 0]}><cylinderGeometry args={[0.05, 0.08, 0.6]} /><primitive object={materials.blackMetal} /></mesh>
-                    <mesh position={[0, 0.7, 0.6]} rotation={[2.0, 0, 0]}><torusGeometry args={[0.3, 0.05, 16, 32]} /><primitive object={materials.blackMetal} /></mesh>
+                    <mesh position={[0, 0.7, 0.6]} rotation={[2.0, 0, 0]}><torusGeometry args={[0.3, 0.05, 8, 16]} /><primitive object={materials.blackMetal} /></mesh>
                 </group>
 
                 <group castShadow>

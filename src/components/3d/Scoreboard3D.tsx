@@ -108,8 +108,7 @@ export const Scoreboard3D = ({ position = [0, 0, 0], rotation = [0, 0, 0] }: any
       {/* 3. TELA DIGITAL (HTML EM 3D) */}
       <Html
         transform
-        occlude
-        distanceFactor={4.8} 
+        distanceFactor={4.8}
         position={[0, 0, 0.32]}
         className="w-[1000px] h-[800px] overflow-hidden bg-[#050505] border-4 border-[#00ffcc]/40 p-8 flex flex-col rounded-xl shadow-[0_0_40px_rgba(0,255,204,0.3)] select-none"
       >
