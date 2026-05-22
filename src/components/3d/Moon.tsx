@@ -18,7 +18,7 @@ export const Moon = () => {
     <group position={[-40, 50, -60]}>
       {/* Main moon sphere */}
       <mesh>
-        <sphereGeometry args={[8, 32, 32]} />
+        <sphereGeometry args={[8, 16, 16]} />
         <meshStandardMaterial 
           color="#e8e4d8"
           emissive="#ffe8c0"
@@ -44,7 +44,7 @@ export const Moon = () => {
 
       {/* Atmospheric glow around moon */}
       <mesh ref={glowRef} scale={[1.4, 1.4, 1.4]}>
-        <sphereGeometry args={[8, 32, 32]} />
+        <sphereGeometry args={[8, 12, 12]} />
         <meshBasicMaterial 
           color="#c8d8ff" 
           transparent 
@@ -55,7 +55,7 @@ export const Moon = () => {
 
       {/* Outer halo */}
       <mesh scale={[2, 2, 2]}>
-        <sphereGeometry args={[8, 32, 32]} />
+        <sphereGeometry args={[8, 8, 8]} />
         <meshBasicMaterial 
           color="#8899cc" 
           transparent 

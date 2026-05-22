@@ -4,6 +4,7 @@ import { RigidBody, RapierRigidBody } from '@react-three/rapier';
 import { SpotLight } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGameStore } from '@/store/gameStore';
+import { ufoPositionRef } from '@/store/ufoPositionRef';
 import { mobileJoystickState } from '@/components/ui/MobileControls';
 
 const MOVE_SPEED = 12;
@@ -18,7 +19,8 @@ export const UFO = () => {
   // Ref para o áudio de abdução
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const { isAbducting, setAbducting, setUfoPosition } = useGameStore();
+  const isAbducting = useGameStore(state => state.isAbducting);
+  const setAbducting = useGameStore(state => state.setAbducting);
   
   const [lightTarget] = useState(() => new THREE.Object3D());
   const keysPressed = useRef({ KeyW: false, KeyA: false, KeyS: false, KeyD: false });
@@ -111,9 +113,11 @@ export const UFO = () => {
     // Aplica a velocidade linear
     rigidBodyRef.current.setLinvel({ x: velocityX, y: 0, z: velocityZ }, true);
 
-    // Atualiza posição na store
+    // Atualiza posição via ref mutável (sem re-renders Zustand)
     const currentPos = rigidBodyRef.current.translation();
-    setUfoPosition(new THREE.Vector3(currentPos.x, currentPos.y, currentPos.z));
+    ufoPositionRef.x = currentPos.x;
+    ufoPositionRef.y = currentPos.y;
+    ufoPositionRef.z = currentPos.z;
 
     // 2. ANIMAÇÕES VISUAIS
     const targetTiltX = z * MAX_TILT;
@@ -168,10 +172,11 @@ export const UFO = () => {
                <mesh key={i} position={[Math.cos(angle) * 1.6, 0, Math.sin(angle) * 1.6]}>
                  <sphereGeometry args={[0.08]} />
                  <meshBasicMaterial color="#00ffcc" toneMapped={false} />
-                 <pointLight distance={1} intensity={2} color="#00ffcc" decay={2} />
                </mesh>
              )
           })}
+          {/* Uma única luz central substitui as 8 individuais */}
+          <pointLight distance={4} intensity={6} color="#00ffcc" decay={2} />
         </group>
 
         {/* MOTOR */}

@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import * as THREE from 'three'; 
 
 export type Section = 'about' | 'projects' | 'contact' | null;
 export type ProjectId = 'ecommerce' | 'mapas' | 'projetos' | null;
@@ -22,16 +21,13 @@ interface GameState {
   startTime: number | null;
   endTime: number | null;
   isPlaying: boolean;
-  
-  ufoPosition: THREE.Vector3; 
-  
+
   openModal: (section: Section) => void;
   closeModal: () => void;
   openProject: (projectId: ProjectId) => void; 
   interactWithHolocube: (content: string) => void; 
   setAbducting: (value: boolean) => void;
-  setUfoPosition: (pos: THREE.Vector3) => void;
-  
+
   startGame: () => void;
   abductCow: () => void; 
   collectSkill: (skillId: string) => void;
@@ -55,8 +51,7 @@ export const useGameStore = create<GameState>((set) => ({
   holocubeContent: null,
   isAbducting: false,
   score: 0,
-  skills: INITIAL_SKILLS_DATA.map(s => ({ ...s })), 
-  ufoPosition: new THREE.Vector3(0, 0, 0),
+  skills: INITIAL_SKILLS_DATA.map(s => ({ ...s })),
 
   startTime: null,
   endTime: null,
@@ -67,7 +62,6 @@ export const useGameStore = create<GameState>((set) => ({
   openProject: (projectId) => set({ currentProject: projectId, currentSection: 'projects', holocubeContent: null }),
   interactWithHolocube: (content) => set({ holocubeContent: content }),
   setAbducting: (value) => set({ isAbducting: value }),
-  setUfoPosition: (pos) => set({ ufoPosition: pos }),
 
   startGame: () => set({ 
     startTime: Date.now(), 
@@ -122,7 +116,6 @@ export const useGameStore = create<GameState>((set) => ({
     currentSection: null,
     currentProject: null,
     holocubeContent: null,
-    ufoPosition: new THREE.Vector3(0, 0, 0),
     startTime: null,
     endTime: null,
     isPlaying: false,

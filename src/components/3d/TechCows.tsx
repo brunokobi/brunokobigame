@@ -1,8 +1,9 @@
-import { useRef, useState, useEffect, useMemo } from 'react'; // Adicione useMemo
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, RapierRigidBody, CuboidCollider } from '@react-three/rapier';
 import { Text } from '@react-three/drei';
 import { useGameStore } from '@/store/gameStore';
+import { ufoPositionRef } from '@/store/ufoPositionRef';
 import * as THREE from 'three';
 
 // --- Materiais Globais Reutilizáveis (Otimização de Performance) ---
@@ -21,183 +22,216 @@ interface TechCowProps {
 // --- Componente da Vaca Individual ---
 const TechCow = ({ position, skillId, skillName }: TechCowProps) => {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
-  
-  const { isAbducting, skills, ufoPosition, collectSkill, abductCow } = useGameStore();
-  
+  const cowGroupRef = useRef<THREE.Group>(null);
+  const cowBodyRef = useRef<THREE.Mesh>(null);
+  const glowSphereRef = useRef<THREE.Mesh>(null);
+
+  // Seletores granulares — evita re-renders quando outras partes do store mudam
+  const isAbducting = useGameStore(state => state.isAbducting);
+  const skills = useGameStore(state => state.skills);
+  const collectSkill = useGameStore(state => state.collectSkill);
+  const abductCow = useGameStore(state => state.abductCow);
+
   const [isCollected, setIsCollected] = useState(false);
-  const [abductionProgress, setAbductionProgress] = useState(0);
+  // isGlowing só muda nas bordas (progresso cruza 0) — não causa re-renders por frame
+  const [isGlowing, setIsGlowing] = useState(false);
   const [randomOffset] = useState(() => Math.random() * 100);
-  const [hasPlayedAbductionSound, setHasPlayedAbductionSound] = useState(false);
+
+  // Refs para valores atualizados por frame — sem setState, sem re-renders
+  const abductionProgressRef = useRef(0);
+  const hasPlayedAbductionSoundRef = useRef(false);
 
   const skill = skills.find(s => s.id === skillId);
   const isAlreadyCollected = skill?.collected || false;
-
   const isHidden = isCollected || isAlreadyCollected;
 
-  // --- CORREÇÃO 1: Criar a instância de áudio apenas UMA vez ---
+  // --- Cria a instância de áudio apenas UMA vez ---
   const cowAudio = useMemo(() => {
     const audio = new Audio('/sounds/cow.mp3');
-    audio.volume = 0.1; // Volume ajustado conforme seu código
+    audio.volume = 0.1;
     return audio;
   }, []);
 
   // --- DETECTOR DE RESET (RESPAWN) ---
   useEffect(() => {
     if (!isAlreadyCollected && isCollected) {
-       setIsCollected(false);
-       setAbductionProgress(0);
-       setHasPlayedAbductionSound(false);
+      setIsCollected(false);
+      setIsGlowing(false);
+      abductionProgressRef.current = 0;
+      hasPlayedAbductionSoundRef.current = false;
 
-       if (rigidBodyRef.current) {
-         rigidBodyRef.current.setTranslation({ x: position[0], y: 5, z: position[2] }, true);
-         rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
-         rigidBodyRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
-       }
+      // Reseta visuais diretamente via refs
+      if (cowGroupRef.current) cowGroupRef.current.scale.setScalar(1);
+      if (cowBodyRef.current) {
+        (cowBodyRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0;
+      }
+      if (glowSphereRef.current) glowSphereRef.current.visible = false;
+
+      if (rigidBodyRef.current) {
+        rigidBodyRef.current.setTranslation({ x: position[0], y: 5, z: position[2] }, true);
+        rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        rigidBodyRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      }
     }
   }, [isAlreadyCollected, isCollected, position]);
 
   // --- SONS ---
   const playCompleteSound = () => {
-    const audio = new Audio('/sounds/complete.wav'); 
-    audio.volume = 0.6; 
+    const audio = new Audio('/sounds/complete.wav');
+    audio.volume = 0.6;
     audio.play().catch(() => {});
   };
 
-  // --- CORREÇÃO 2: Só toca se não estiver tocando ---
   const playCowSound = () => {
-    // A propriedade .paused é true se o áudio parou ou acabou.
-    // Se for false, significa que ainda está tocando, então ignoramos o play.
     if (cowAudio.paused) {
-        cowAudio.play().catch(() => {});
+      cowAudio.play().catch(() => {});
     }
   };
 
   useFrame((state, delta) => {
-    if (isHidden || !rigidBodyRef.current || !ufoPosition) return;
+    if (isHidden || !rigidBodyRef.current) return;
 
     const currentPos = rigidBodyRef.current.translation();
 
     if (currentPos.y < -10) {
-        rigidBodyRef.current.setTranslation({ x: position[0], y: 5, z: position[2] }, true);
-        rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        return;
+      rigidBodyRef.current.setTranslation({ x: position[0], y: 5, z: position[2] }, true);
+      rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      return;
     }
 
+    const { x: ux, z: uz } = ufoPositionRef;
     const dist = Math.sqrt(
-      Math.pow(currentPos.x - ufoPosition.x, 2) + 
-      Math.pow(currentPos.z - ufoPosition.z, 2)
+      Math.pow(currentPos.x - ux, 2) +
+      Math.pow(currentPos.z - uz, 2)
     );
 
     const isUnderBeam = dist < 3 && isAbducting;
 
     if (isUnderBeam) {
-       // --- TOCA O SOM DA VACA (MUUU) ---
-       if (!hasPlayedAbductionSound) {
-           playCowSound();
-           setHasPlayedAbductionSound(true); 
-       }
+      if (!hasPlayedAbductionSoundRef.current) {
+        playCowSound();
+        hasPlayedAbductionSoundRef.current = true;
+      }
 
-       setAbductionProgress(prev => Math.min(prev + delta * 0.8, 1));
-       
-       const liftForce = 0.6 + abductionProgress * 1.5; 
-       rigidBodyRef.current.setLinvel({ x: 0, y: liftForce * 5, z: 0 }, true);
-       
-       const pullX = (ufoPosition.x - currentPos.x) * 2;
-       const pullZ = (ufoPosition.z - currentPos.z) * 2;
-       rigidBodyRef.current.applyImpulse({ x: pullX * delta, y: 0, z: pullZ * delta }, true);
-       rigidBodyRef.current.applyTorqueImpulse({ x: 0, y: 0.2, z: 0 }, true);
-       
-       if (currentPos.y > 6) {
-         playCompleteSound();
+      const prevProgress = abductionProgressRef.current;
+      abductionProgressRef.current = Math.min(prevProgress + delta * 0.8, 1);
+      const progress = abductionProgressRef.current;
 
-         if (collectSkill) collectSkill(skillId);
-         else if (abductCow) abductCow();
-         
-         setIsCollected(true);
-         rigidBodyRef.current.setTranslation({ x: 0, y: -500, z: 0 }, true);
-       }
+      // Muta meshes diretamente — zero re-renders por frame
+      if (cowGroupRef.current) cowGroupRef.current.scale.setScalar(1 - progress * 0.3);
+      if (cowBodyRef.current) {
+        (cowBodyRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = (1 + progress * 2) * 0.3;
+      }
+      if (glowSphereRef.current) {
+        if (prevProgress === 0) {
+          glowSphereRef.current.visible = true;
+          setIsGlowing(true); // Dispara apenas uma vez na borda
+        }
+        (glowSphereRef.current.material as THREE.MeshBasicMaterial).opacity = 0.1 + progress * 0.2;
+      }
+
+      const liftForce = 0.6 + progress * 1.5;
+      rigidBodyRef.current.setLinvel({ x: 0, y: liftForce * 5, z: 0 }, true);
+
+      const pullX = (ux - currentPos.x) * 2;
+      const pullZ = (uz - currentPos.z) * 2;
+      rigidBodyRef.current.applyImpulse({ x: pullX * delta, y: 0, z: pullZ * delta }, true);
+      rigidBodyRef.current.applyTorqueImpulse({ x: 0, y: 0.2, z: 0 }, true);
+
+      if (currentPos.y > 6) {
+        playCompleteSound();
+        if (collectSkill) collectSkill(skillId);
+        else if (abductCow) abductCow();
+        setIsCollected(true);
+        rigidBodyRef.current.setTranslation({ x: 0, y: -500, z: 0 }, true);
+      }
 
     } else {
-       // Reseta o estado para permitir tocar de novo no futuro,
-       // mas a proteção dentro de playCowSound impede que toque IMEDIATAMENTE se ainda estiver rolando.
-       if (abductionProgress === 0) {
-           setHasPlayedAbductionSound(false);
-       }
-       
-       if (abductionProgress > 0) {
-          setAbductionProgress(prev => Math.max(prev - delta * 2, 0));
-       } else {
-          const time = state.clock.getElapsedTime();
-          if (currentPos.y < 2.0 && currentPos.y > 0 && Math.sin(time * 2 + randomOffset) > 0.98) {
-            rigidBodyRef.current.applyImpulse({ x: 0, y: 2, z: 0 }, true);
-          }
-       }
+      if (abductionProgressRef.current === 0) {
+        hasPlayedAbductionSoundRef.current = false;
+      }
+
+      if (abductionProgressRef.current > 0) {
+        abductionProgressRef.current = Math.max(abductionProgressRef.current - delta * 2, 0);
+        const progress = abductionProgressRef.current;
+
+        if (cowGroupRef.current) cowGroupRef.current.scale.setScalar(1 - progress * 0.3);
+        if (cowBodyRef.current) {
+          (cowBodyRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity =
+            progress > 0 ? (1 + progress * 2) * 0.3 : 0;
+        }
+        if (glowSphereRef.current && progress === 0) {
+          glowSphereRef.current.visible = false;
+          setIsGlowing(false); // Dispara apenas uma vez na borda
+        }
+      } else {
+        const time = state.clock.getElapsedTime();
+        if (currentPos.y < 2.0 && currentPos.y > 0 && Math.sin(time * 2 + randomOffset) > 0.98) {
+          rigidBodyRef.current.applyImpulse({ x: 0, y: 2, z: 0 }, true);
+        }
+      }
     }
   });
-
-  const glowIntensity = abductionProgress > 0 ? 1 + abductionProgress * 2 : 0;
-  const cowScale = 1 - abductionProgress * 0.3;
 
   return (
     <RigidBody
       ref={rigidBodyRef}
       position={isHidden ? [0, -500, 0] : position}
       mass={1}
-      lockRotations={abductionProgress < 0.1}
+      lockRotations={true}
       linearDamping={1}
       angularDamping={1}
       colliders={false}
-      ccd={true} 
+      ccd={true}
     >
-        <group scale={cowScale} visible={!isHidden}>
-          {abductionProgress > 0 && (
-            <mesh position={[0, 0.6, 0]}>
-              <sphereGeometry args={[1.2, 16, 16]} />
-              <meshBasicMaterial color="#00ff88" transparent opacity={0.1 + abductionProgress * 0.2} side={THREE.BackSide} />
-            </mesh>
-          )}
+      <group ref={cowGroupRef} visible={!isHidden}>
+        {/* Esfera de brilho — sempre renderizada, controlada via ref (sem conditional render) */}
+        <mesh ref={glowSphereRef} position={[0, 0.6, 0]} visible={false}>
+          <sphereGeometry args={[1.2, 8, 8]} />
+          <meshBasicMaterial color="#00ff88" transparent opacity={0.1} side={THREE.BackSide} />
+        </mesh>
 
-          {/* Corpo */}
-          <mesh castShadow receiveShadow position={[0, 0.6, 0]}>
-              <boxGeometry args={[0.7, 0.6, 1.1]} />
-              <meshStandardMaterial color="#f0f0f0" roughness={0.8} emissive="#00ff88" emissiveIntensity={glowIntensity * 0.3}/>
-          </mesh>
-        
-          <mesh position={[0.36, 0.6, 0.2]}><boxGeometry args={[0.05, 0.4, 0.4]} /><primitive object={cowBlack} /></mesh>
-          <mesh position={[-0.36, 0.7, -0.3]}><boxGeometry args={[0.05, 0.3, 0.3]} /><primitive object={cowBlack} /></mesh>
-        
-          {/* Cabeça */}
-          <group position={[0, 1.1, 0.7]}>
-              <mesh castShadow><boxGeometry args={[0.4, 0.4, 0.4]} /><primitive object={cowWhite} /></mesh>
-              <mesh position={[0, -0.1, 0.21]}><boxGeometry args={[0.42, 0.15, 0.05]} /><primitive object={cowPink} /></mesh>
-              <mesh position={[0.15, 0.25, 0]} rotation={[0, 0, -0.3]}><coneGeometry args={[0.04, 0.15, 8]} /><primitive object={cowHorn} /></mesh>
-              <mesh position={[-0.15, 0.25, 0]} rotation={[0, 0, 0.3]}><coneGeometry args={[0.04, 0.15, 8]} /><primitive object={cowHorn} /></mesh>
-          </group>
-        
-          {/* Pernas */}
-          <mesh position={[0.2, 0.3, 0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
-          <mesh position={[-0.2, 0.3, 0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
-          <mesh position={[0.2, 0.3, -0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
-          <mesh position={[-0.2, 0.3, -0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
+        {/* Corpo */}
+        <mesh ref={cowBodyRef} castShadow receiveShadow position={[0, 0.6, 0]}>
+          <boxGeometry args={[0.7, 0.6, 1.1]} />
+          <meshStandardMaterial color="#f0f0f0" roughness={0.8} emissive="#00ff88" emissiveIntensity={0} />
+        </mesh>
 
-          <Text
-            position={[0, 1.8, 0]} 
-            fontSize={0.4}
-            color={abductionProgress > 0 ? "#00ff88" : "white"}
-            outlineWidth={0.02}
-            outlineColor="#000000"
-            anchorX="center"
-            anchorY="middle"
-          >
-            {skillName}
-          </Text>
+        <mesh position={[0.36, 0.6, 0.2]}><boxGeometry args={[0.05, 0.4, 0.4]} /><primitive object={cowBlack} /></mesh>
+        <mesh position={[-0.36, 0.7, -0.3]}><boxGeometry args={[0.05, 0.3, 0.3]} /><primitive object={cowBlack} /></mesh>
 
-          <CuboidCollider 
-            args={[0.5, 0.6, 0.8]} 
-            position={[0, 0.6, 0]}
-            density={2}
-          />
+        {/* Cabeça */}
+        <group position={[0, 1.1, 0.7]}>
+          <mesh castShadow><boxGeometry args={[0.4, 0.4, 0.4]} /><primitive object={cowWhite} /></mesh>
+          <mesh position={[0, -0.1, 0.21]}><boxGeometry args={[0.42, 0.15, 0.05]} /><primitive object={cowPink} /></mesh>
+          <mesh position={[0.15, 0.25, 0]} rotation={[0, 0, -0.3]}><coneGeometry args={[0.04, 0.15, 8]} /><primitive object={cowHorn} /></mesh>
+          <mesh position={[-0.15, 0.25, 0]} rotation={[0, 0, 0.3]}><coneGeometry args={[0.04, 0.15, 8]} /><primitive object={cowHorn} /></mesh>
         </group>
+
+        {/* Pernas */}
+        <mesh position={[0.2, 0.3, 0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
+        <mesh position={[-0.2, 0.3, 0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
+        <mesh position={[0.2, 0.3, -0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
+        <mesh position={[-0.2, 0.3, -0.4]}><boxGeometry args={[0.15, 0.6, 0.15]} /><primitive object={cowWhite} /></mesh>
+
+        <Text
+          position={[0, 1.8, 0]}
+          fontSize={0.4}
+          color={isGlowing ? "#00ff88" : "white"}
+          outlineWidth={0.02}
+          outlineColor="#000000"
+          anchorX="center"
+          anchorY="middle"
+        >
+          {skillName}
+        </Text>
+
+        <CuboidCollider
+          args={[0.5, 0.6, 0.8]}
+          position={[0, 0.6, 0]}
+          density={2}
+        />
+      </group>
     </RigidBody>
   );
 };

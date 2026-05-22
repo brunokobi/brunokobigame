@@ -1,7 +1,7 @@
 import { Suspense, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Stars, PerspectiveCamera, OrbitControls, Cloud, Environment, Instance, Instances, Loader } from '@react-three/drei';
+import { Stars, PerspectiveCamera, OrbitControls, Cloud, Environment, Instance, Instances, Loader, AdaptiveDpr } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Importação dos seus componentes externos
@@ -233,14 +233,21 @@ const RockyHorizon = () => {
 
   return (
     <group>
-      {rocks.map((rock: any, i) => (
-        <mesh key={i} position={rock.pos} rotation={rock.rot as any} scale={rock.scale}>
-          <dodecahedronGeometry args={[1, 0]} /> 
-          <meshStandardMaterial color="#1a1a2e" roughness={0.9} metalness={0.1} flatShading={true} />
-        </mesh>
-      ))}
+      {/* Instanced — todos os rochedos em um único draw call */}
+      <Instances>
+        <dodecahedronGeometry args={[1, 0]} />
+        <meshStandardMaterial color="#1a1a2e" roughness={0.9} metalness={0.1} flatShading={true} />
+        {rocks.map((rock: any, i) => (
+          <Instance
+            key={i}
+            position={rock.pos as [number, number, number]}
+            rotation={rock.rot as [number, number, number]}
+            scale={rock.scale as [number, number, number]}
+          />
+        ))}
+      </Instances>
       <group position={[0, 20, -80]}>
-         <Cloud opacity={0.2} speed={0.1} segments={10} color="#8899aa" />
+        <Cloud opacity={0.2} speed={0.1} segments={10} color="#8899aa" />
       </group>
     </group>
   );
@@ -293,7 +300,7 @@ const SceneContent = () => {
 
       <Environment preset="night" blur={0.6} background={false} />
       <fogExp2 attach="fog" args={['#101025', 0.008]} /> 
-      <Stars radius={120} depth={50} count={2000} factor={4} saturation={0} fade speed={1} />
+      <Stars radius={120} depth={50} count={1000} factor={4} saturation={0} fade speed={1} />
 
       <Moon />
       <RockyHorizon />
@@ -343,14 +350,15 @@ export const Scene = () => {
     <div className="fixed inset-0 w-full h-full">
       <Canvas
         shadows
-        dpr={[1, 2]}
-        gl={{ 
+        dpr={[1, 1.5]}
+        gl={{
           antialias: true,
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.8 
+          toneMappingExposure: 1.8
         }}
-        style={{ background: '#101025' }} 
+        style={{ background: '#101025' }}
       >
+        <AdaptiveDpr pixelated />
         <Suspense fallback={null}>
           <SceneContent />
         </Suspense>
