@@ -1,7 +1,7 @@
-import LoadingScreen from '@/components/loading/LoadingScreen';
+import Game from './Game';
 
 const Index = () => {
-  return <LoadingScreen />;
+  return <Game />;
 };
 
 export default Index;

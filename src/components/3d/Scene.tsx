@@ -1,7 +1,7 @@
 import { Suspense, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Stars, PerspectiveCamera, OrbitControls, Cloud, Instance, Instances, Loader, AdaptiveDpr } from '@react-three/drei';
+import { Stars, PerspectiveCamera, OrbitControls, Cloud, Instance, Instances, AdaptiveDpr } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Importação dos seus componentes externos
@@ -246,9 +246,32 @@ const RockyHorizon = () => {
 };
 
 /* =========================================
+   SINAL DE PRONTO
+   Só dispara depois que o Suspense acima já resolveu
+   (física do Rapier + textura da grama carregadas) e alguns
+   frames já renderizaram de verdade — evita marcar "pronto"
+   num frame que ainda não terminou de compilar os shaders.
+   ========================================= */
+const SceneReadySignal = ({ onReady }: { onReady: () => void }) => {
+  const frameCount = useRef(0);
+  const firedRef = useRef(false);
+
+  useFrame(() => {
+    if (firedRef.current) return;
+    frameCount.current += 1;
+    if (frameCount.current >= 3) {
+      firedRef.current = true;
+      onReady();
+    }
+  });
+
+  return null;
+};
+
+/* =========================================
    CONTEÚDO DA CENA PRINCIPAL
    ========================================= */
-const SceneContent = () => {
+const SceneContent = ({ onReady }: { onReady?: () => void }) => {
   const controlsRef = useRef<any>(null);
 
   useFrame((state) => {
@@ -306,6 +329,8 @@ const SceneContent = () => {
       <Moon />
       <RockyHorizon />
 
+      {onReady && <SceneReadySignal onReady={onReady} />}
+
       <FlyingET />
 
       <Scoreboard3D position={[38, 8.5, 25]} rotation={[0, -0.5, 0]} />
@@ -346,7 +371,12 @@ const SceneContent = () => {
   );
 };
 
-export const Scene = () => {
+interface SceneProps {
+  /** Disparado uma única vez, quando física + texturas + primeiros frames já renderizaram de verdade. */
+  onReady?: () => void;
+}
+
+export const Scene = ({ onReady }: SceneProps) => {
   return (
     <div className="fixed inset-0 w-full h-full">
       <Canvas
@@ -361,17 +391,9 @@ export const Scene = () => {
       >
         <AdaptiveDpr pixelated />
         <Suspense fallback={null}>
-          <SceneContent />
+          <SceneContent onReady={onReady} />
         </Suspense>
       </Canvas>
-      
-      {/* Adicionado: Tela de carregamento que sai suavemente quando a cena 3D termina de montar */}
-      <Loader 
-        containerStyles={{ backgroundColor: '#101025' }} // Fundo combinando com a cena
-        innerStyles={{ width: '300px' }}
-        barStyles={{ backgroundColor: '#00ffcc', height: '10px' }}
-        dataInterpolation={(p) => `Inicializando Invasão... ${p.toFixed(0)}%`}
-      />
     </div>
   );
 };

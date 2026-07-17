@@ -2,10 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Index from "./pages/Index";
-import Game from "./pages/Game";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -17,11 +16,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* LOADING */}
+          {/* LOADING + GAME (unificados: a tela inicial já é o loading real da cena) */}
           <Route path="/" element={<Index />} />
 
-          {/* GAME */}
-          <Route path="/game" element={<Game />} />
+          {/* Compatibilidade com links antigos para /game */}
+          <Route path="/game" element={<Navigate to="/" replace />} />
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />

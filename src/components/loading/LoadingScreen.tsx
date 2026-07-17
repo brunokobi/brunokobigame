@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Play } from 'lucide-react'; 
+import { Play } from 'lucide-react';
 
 import StarField from './StarField';
 import Nebula from './Nebula';
@@ -9,105 +8,50 @@ import UFOElement from './UFOElement';
 import GridOverlay from './GridOverlay';
 import LoadingProgress from './LoadingProgress';
 
-const LOADING_DURATION = 5000;
+interface LoadingScreenProps {
+  /** true assim que o usuário clicou em "Inicializar Sistema". */
+  hasStarted: boolean;
+  /** Progresso real (0-100) do carregamento da cena 3D — nunca chega a 100 antes de estar pronto de verdade. */
+  progress: number;
+  /** true quando a cena 3D já renderizou de verdade (física + texturas + primeiros frames). */
+  isReady: boolean;
+  /** true durante a transição de saída, controlada por quem monta este componente. */
+  isFadingOut: boolean;
+  onStart: () => void;
+}
 
-const LoadingScreen = () => {
-  const navigate = useNavigate();
-  
-  // Estados
-  const [hasStarted, setHasStarted] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
-  const [isFadingOut, setIsFadingOut] = useState(false);
+const LoadingScreen = ({ hasStarted, progress, isReady, isFadingOut, onStart }: LoadingScreenProps) => {
   const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
 
-  // Refs de Áudio
-  const bgMusicRef = useRef<HTMLAudioElement | null>(null);
+  // Ref de Áudio — só o efeito sonoro de scanline durante o carregamento.
+  // A música de fundo do jogo é responsabilidade de quem revela o jogo (Game.tsx),
+  // pra não termos duas trilhas concorrendo entre a tela de loading e o jogo.
   const scanlineSfxRef = useRef<HTMLAudioElement | null>(null);
 
   // 1. Configuração Inicial
   useEffect(() => {
-    // Música de Fundo (MP3)
-    bgMusicRef.current = new Audio('/sounds/fundo.mp3'); // Ajuste a extensão se for .wav
-    bgMusicRef.current.loop = true;
-    bgMusicRef.current.volume = 0.5; // Começa com volume normal
-
-    // Efeito Scanline (WAV)
     scanlineSfxRef.current = new Audio('/sounds/scanline.wav');
     scanlineSfxRef.current.loop = true;
     scanlineSfxRef.current.volume = 0.15;
 
     return () => {
-      bgMusicRef.current?.pause();
       scanlineSfxRef.current?.pause();
     };
   }, []);
 
-  // 2. Click do Usuário -> Toca SOMENTE o Scanline
+  // 2. Click do Usuário -> Toca o Scanline e avisa quem monta este componente pra começar a carregar de verdade
   const handleStart = () => {
-    // Toca o ruído de carregamento
     scanlineSfxRef.current?.play().catch(e => console.warn("Audio error:", e));
-    setHasStarted(true);
+    onStart();
   };
 
-  // 3. Monitorar o Fim do Loading -> Toca a Música de Fundo
+  // 3. Quando a cena estiver pronta de verdade, para o scanline
   useEffect(() => {
-    if (isComplete) {
-      // Para o barulho de scanline
-      if (scanlineSfxRef.current) {
-        scanlineSfxRef.current.pause();
-        scanlineSfxRef.current.currentTime = 0;
-      }
-
-      // Inicia a música de fundo (Momento "Sistema Online")
-      bgMusicRef.current?.play().catch(e => console.warn("Audio error:", e));
+    if (isReady && scanlineSfxRef.current) {
+      scanlineSfxRef.current.pause();
+      scanlineSfxRef.current.currentTime = 0;
     }
-  }, [isComplete]);
-
-  // 4. Fade Out apenas na saída da tela
-  useEffect(() => {
-    if (isFadingOut) {
-      const fadeInterval = setInterval(() => {
-        const music = bgMusicRef.current;
-        // Diminui o volume da música suavemente antes de mudar de página
-        if (music && music.volume > 0.05) {
-          music.volume -= 0.05;
-        } else {
-          clearInterval(fadeInterval);
-        }
-      }, 100);
-      return () => clearInterval(fadeInterval);
-    }
-  }, [isFadingOut]);
-
-  // --- Lógica Visual (Inalterada) ---
-  useEffect(() => {
-    if (!hasStarted) return;
-
-    const startTime = Date.now();
-    let animationFrameId: number;
-
-    const updateProgress = () => {
-      const elapsed = Date.now() - startTime;
-      const newProgress = Math.min((elapsed / LOADING_DURATION) * 100, 100);
-      setProgress(newProgress);
-
-      if (newProgress < 100) {
-        animationFrameId = requestAnimationFrame(updateProgress);
-      } else {
-        setIsComplete(true); // <--- Isso dispara o useEffect da música acima
-        setTimeout(() => {
-          setIsFadingOut(true);
-          setTimeout(() => {
-            navigate('/game');
-          }, 1500); // Dei um tempinho a mais (1.5s) pra ouvir o começo da música
-        }, 500);
-      }
-    };
-
-    animationFrameId = requestAnimationFrame(updateProgress);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [hasStarted, navigate]);
+  }, [isReady]);
 
   // Mouse Parallax
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -154,7 +98,7 @@ const LoadingScreen = () => {
           <>
             <CodeParticles />
             <UFOElement mouseOffset={mouseOffset} />
-            <LoadingProgress progress={progress} isComplete={isComplete} />
+            <LoadingProgress progress={progress} isComplete={isReady} />
           </>
         )}
       </div>
