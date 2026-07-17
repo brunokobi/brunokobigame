@@ -23,10 +23,6 @@ export default defineConfig(({ mode }) => ({
     },
   },
 
-  optimizeDeps: {
-    exclude: ["@arcgis/core"], // 🔥 IMPORTANTE
-  },
-
   build: {
     commonjsOptions: {
       transformMixedEsModules: true,
